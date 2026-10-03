@@ -1,6 +1,6 @@
 BSD 3-Clause License
 
-Copyright (c) 2026, kobesoft-labs
+Copyright (c) 2026, 神戸ソフト株式会社 (Kobesoft Co., Ltd.)
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -29,11 +29,9 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ------------------------------------------------------------------------------
-Images
+NASA imagery
 
-- images/<theme>/ (except images/earth/): generated with the OpenAI image API for
-  this project and distributed under the same BSD 3-Clause License as the code.
-- images/earth/: derived from NASA imagery (Blue Marble Next Generation, Earth at
-  Night 2012 / Black Marble, Blue Marble clouds), courtesy of NASA Earth
-  Observatory. NASA imagery is generally not subject to copyright in the United
-  States; please credit "NASA Earth Observatory" when reusing it.
+images/earth/ is derived from NASA imagery (Blue Marble Next Generation,
+Earth at Night 2012 / Black Marble, Blue Marble clouds), courtesy of
+NASA Earth Observatory. NASA imagery is generally not subject to copyright in
+the United States; please credit "NASA Earth Observatory" when reusing it.

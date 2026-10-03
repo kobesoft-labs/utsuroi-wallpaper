@@ -185,7 +185,7 @@
     return w;
   }
   function fetchWeather(lat, lon) { // Open-Meteo (キー不要)。15分キャッシュ
-    var key = 'ls-weather:' + lat.toFixed(1) + ',' + lon.toFixed(1);
+    var key = 'utsuroi-weather:' + lat.toFixed(2) + ',' + lon.toFixed(2);
     try { var c = JSON.parse(localStorage.getItem(key) || 'null'); if (c && Date.now() - c.t < 15 * 60e3) return Promise.resolve(c.w); } catch (e) { }
     var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current=weather_code,cloud_cover,wind_speed_10m&wind_speed_unit=ms&timezone=auto';
     return fetch(url).then(function (r) { return r.json(); }).then(function (j) {
@@ -194,25 +194,42 @@
       return w;
     });
   }
+  /** 地名 → 緯度経度 (Open-Meteo の地名検索。キー不要・世界中)。'auto' はブラウザの現在地 (位置情報の許可が必要) */
+  function geocode(place, lang) {
+    if (place === 'auto') return new Promise(function (ok, ng) {
+      if (!navigator.geolocation) return ng(new Error('geolocation unavailable'));
+      navigator.geolocation.getCurrentPosition(function (p) { ok({ lat: p.coords.latitude, lon: p.coords.longitude, name: 'current location' }); }, ng, { maximumAge: 3600e3, timeout: 10e3 });
+    });
+    var key = 'utsuroi-geo:' + place;
+    try { var c = JSON.parse(localStorage.getItem(key) || 'null'); if (c) return Promise.resolve(c); } catch (e) { }
+    // 正式名称で照合されるので、日本語の地名は「〜市」「〜都」なども同時に探し、人口がいちばん多い場所を選ぶ (例: 神戸 → 神戸市)
+    var cjk = /[\u3040-\u30ff\u3400-\u9fff]/.test(place), names = [place];
+    if (cjk && !/[市都府県区町村]$/.test(place)) names = names.concat(['市', '都', '府', '県', '区'].map(function (x) { return place + x; }));
+    var search = function (q) {
+      return fetch('https://geocoding-api.open-meteo.com/v1/search?count=10&format=json&language=' + (lang || (cjk ? 'ja' : 'en')) + '&name=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); }).then(function (j) { return j.results || []; }).catch(function () { return []; });
+    };
+    var save = function (res) { try { localStorage.setItem(key, JSON.stringify(res)); } catch (e) { } return res; };
+    return Promise.all(names.map(search)).then(function (lists) {
+      var all = [].concat.apply([], lists);
+      if (all.length) {
+        all.sort(function (a, b) { return (b.population || 0) - (a.population || 0); });
+        var g = all[0]; return save({ lat: g.latitude, lon: g.longitude, name: g.name, country: g.country, timezone: g.timezone });
+      }
+      // 見つからない時は OpenStreetMap の地名検索で補う (結果は保存して、同じ地名を繰り返し問い合わせない)
+      return fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=' + (cjk ? 'ja' : 'en') + '&q=' + encodeURIComponent(place))
+        .then(function (r) { return r.json(); }).then(function (j) {
+          if (!j || !j[0]) throw new Error('place not found: ' + place);
+          return save({ lat: +j[0].lat, lon: +j[0].lon, name: j[0].display_name.split(',')[0], country: '' });
+        });
+    });
+  }
   function resolveWeather(w) {
     if (typeof w === 'string') return Object.assign({}, PRESETS[w] || PRESETS.clear);
     if (w && typeof w === 'object') return Object.assign({}, PRESETS.clear, w);
     return Object.assign({}, PRESETS.clear);
   }
 
-  // マゼンタ(#FF00FF)キーで抜いた画像 → 白+アルファのマスク (空=不透明)
-  function keyMagenta(img) {
-    try {
-      var c = canvas(img.naturalWidth || img.width, img.naturalHeight || img.height), x = c.getContext('2d');
-      x.drawImage(img, 0, 0);
-      var d = x.getImageData(0, 0, c.width, c.height), p = d.data;
-      for (var i = 0; i < p.length; i += 4) {
-        var m = Math.min(p[i], p[i + 2]) - p[i + 1];
-        p[i] = p[i + 1] = p[i + 2] = 255; p[i + 3] = clamp((m - 60) / 80, 0, 1) * 255;
-      }
-      x.putImageData(d, 0, 0); return c;
-    } catch (e) { return null; }
-  }
   // 空マスクの自動補正: 粗いマスク(AI生成など)を目安に、画像そのものの色から空と地上の境を引き直す。
   // 絵ごとに輪郭が微妙にずれても、各画像にぴったり合った空マスクが得られる。
   function boxBlur(src, w, h, r) { // 分離型ボックスブラー (端はクランプ)
@@ -260,20 +277,6 @@
       ox.putImageData(od, 0, 0); return oc;
     } catch (e) { return null; } // CORS などで画素が読めない時は null (粗いマスクにフォールバック)
   }
-  // 白黒の雲マット → アルファ (白=雲)
-  function lumaToAlpha(img) {
-    try {
-      var c = canvas((img.naturalWidth || img.width) >> 1, (img.naturalHeight || img.height) >> 1), x = c.getContext('2d');
-      x.drawImage(img, 0, 0, c.width, c.height);
-      var d = x.getImageData(0, 0, c.width, c.height), p = d.data;
-      for (var i = 0; i < p.length; i += 4) {
-        var l = (p[i] + p[i + 1] + p[i + 2]) / 3;
-        p[i] = p[i + 1] = p[i + 2] = 255; p[i + 3] = clamp((l - 25) / 190, 0, 1) * 255;
-      }
-      x.putImageData(d, 0, 0); return c;
-    } catch (e) { return null; }
-  }
-
   // ------------------------------------------------------------------ スプライト
   function softSprite(size, col, a) { var c = canvas(size, size), x = c.getContext('2d'); glow(x, size / 2, size / 2, size / 2, col, [[0, a], [0.5, a * 0.45], [1, 0]]); return c; }
 
@@ -895,7 +898,7 @@
     var el = typeof target === 'string' ? document.querySelector(target) : target;
     if (!el) throw new Error('[UtsuroiSky] target not found: ' + target);
     if (el.__ls) el.__ls.destroy();
-    var o = Object.assign({ weather: 'auto', date: null, fps: 30, maxDpr: 1.5, transitions: null }, clean(opts));
+    var o = Object.assign({ weather: 'auto', date: null, fps: 30, maxDpr: 1.5, transitions: null, place: null, weatherAt: null, weatherProvider: null }, clean(opts));
     if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
     var cv = canvas(2, 2); cv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;z-index:0';
     el.insertBefore(cv, el.firstChild);
@@ -912,7 +915,7 @@
       renderer: rd,
       setWeather: function (w) {
         o.weather = w; clearTimeout(wt);
-        if (w === 'auto') { var go = function () { fetchWeather(rd.o.lat, rd.o.lon).then(function (r) { if (o.weather === 'auto') rd.setWeather(r); }).catch(function () { }).then(function () { wt = setTimeout(go, 15 * 60e3); }); }; go(); }
+        if (w === 'auto') { var go = function () { var at = o.weatherAt || [rd.o.lat, rd.o.lon]; Promise.resolve((o.weatherProvider || fetchWeather)(at[0], at[1])).then(function (r) { if (o.weather === 'auto') rd.setWeather(r); }).catch(function () { }).then(function () { wt = setTimeout(go, 15 * 60e3); }); }; go(); }
         else rd.setWeather(w);
         return api;
       },
@@ -920,6 +923,7 @@
       destroy: function () { running = false; cancelAnimationFrame(raf); clearTimeout(wt); ro.disconnect(); if (io) io.disconnect(); cv.remove(); delete el.__ls; }
     };
     api.setWeather(o.weather);
+    if (o.place) geocode(o.place).then(function (p) { rd.o.lat = p.lat; rd.o.lon = p.lon; if (o.weather === 'auto') api.setWeather('auto'); }).catch(function (e) { console.warn('[UtsuroiSky]', e.message); });
     function tick(t) {
       if (!running) return; raf = requestAnimationFrame(tick);
       if (document.hidden || !visible || t - last < 1000 / o.fps) return;
@@ -934,7 +938,7 @@
   global.UtsuroiSky = {
     Renderer: Renderer, mount: mount,
     astro: { celestial: celestial, subsolar: subsolar, sublunar: sublunar, moonEcl: moonEcl, sunTimes: sunTimes, moonTimes: moonTimes, moonInfo: moonInfo, moonPhase: moonPhase },
-    weather: { presets: PRESETS, fromWmo: fromWmo, fetch: fetchWeather, resolve: resolveWeather },
-    util: { seasonBlend: seasonBlend, timeBlend: timeBlend, keyMagenta: keyMagenta, refineSky: refineSky, lumaToAlpha: lumaToAlpha, TRANSITIONS: TRANSITIONS }
+    weather: { presets: PRESETS, fromWmo: fromWmo, fetch: fetchWeather, resolve: resolveWeather, geocode: geocode },
+    util: { seasonBlend: seasonBlend, timeBlend: timeBlend, refineSky: refineSky, TRANSITIONS: TRANSITIONS }
   };
 })(window);

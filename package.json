@@ -1,9 +1,9 @@
 {
   "name": "utsuroi-wallpaper",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "季節・時間・天気で移ろうライブ壁紙 (Canvas / WebGL)。A Japanese-style live wallpaper that changes with the seasons, time of day and weather.",
   "license": "BSD-3-Clause",
-  "author": "kobesoft-labs",
+  "author": "神戸ソフト株式会社 (Kobesoft Co., Ltd.)",
   "homepage": "https://kobesoft-labs.github.io/utsuroi-wallpaper/",
   "repository": {
     "type": "git",

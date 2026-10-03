@@ -97,7 +97,8 @@
     Object.keys(opts || {}).forEach(function (k) { if (opts[k] !== undefined) given[k] = opts[k]; });
     var o = this.o = Object.assign({
       theme: 'mountain', lat: 34.69, lon: 135.19, weather: 'auto', date: null,
-      fps: 30, ambient: true, base: DEFAULT_BASE, format: 'webp', maxDpr: 1.5, transitions: null
+      fps: 30, ambient: true, base: DEFAULT_BASE, format: 'webp', maxDpr: 1.5, transitions: null,
+      place: null, weatherAt: null, weatherProvider: null   // place: 地名 or 'auto' / weatherAt: 天気だけ別の場所 / weatherProvider: 自前の天気 (lat, lon) => {cloud, rain, ...}
     }, given);
     this.el = el;
     if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
@@ -124,6 +125,7 @@
       el.style.background = bgCss(this.T, Sky.util.timeBlend(c0.sun.alt, c0.sun.morning), Sky.util.seasonBlend(d0, o.lat, o.transitions));
     }
     this.setWeather(o.weather);
+    if (o.place) this.setPlace(o.place);
     this.running = true;
     this._tick = function (t) { if (!self.running) return; self.raf = requestAnimationFrame(self._tick); self._frame(t); };
     this.raf = requestAnimationFrame(this._tick);
@@ -185,12 +187,26 @@
     var self = this; this.o.weather = w; clearTimeout(this._wt);
     if (w === 'auto') {
       var go = function () {
-        Sky.weather.fetch(self.o.lat, self.o.lon).then(function (r) { if (self.o.weather === 'auto') self.sky.setWeather(r); })
+        var at = self.o.weatherAt || [self.o.lat, self.o.lon];   // データ元 (既定: Open-Meteo) は世界中どこでも取れる
+        Promise.resolve((self.o.weatherProvider || Sky.weather.fetch)(at[0], at[1])).then(function (r) { if (self.o.weather === 'auto') self.sky.setWeather(r); })
           .catch(function () { }).then(function () { self._wt = setTimeout(go, 15 * 60e3); });
       };
       go();
     } else this.sky.setWeather(w);
     return this;
+  };
+  /** 場所を緯度経度で変える (太陽・月・季節・天気・地球の中心がすべてその場所に) */
+  P.setLocation = function (lat, lon) {
+    this.o.lat = +lat; this.o.lon = +lon;
+    if (this.globe && !this.o.view) this.globe.setView(this.o.lat, this.o.lon);
+    if (this.o.weather === 'auto') this.setWeather('auto');
+    return this;
+  };
+  /** 場所を地名で変える ('札幌' 'Paris' など。'auto' は閲覧者の現在地)。Promise を返す */
+  P.setPlace = function (place) {
+    var self = this; this.o.place = place;
+    return Sky.weather.geocode(place).then(function (p) { if (self.o.place === place) self.setLocation(p.lat, p.lon); return p; })
+      .catch(function (e) { console.warn('[Utsuroi]', e.message); });
   };
   /** 地球テーマで見る地点 (緯度・経度) を変える */
   P.setView = function (lat, lon) { this.o.view = [+lat, +lon]; if (this.globe) this.globe.setView(lat, lon); return this; };
@@ -351,13 +367,14 @@
     util: Sky.util, astro: Sky.astro, weather: Sky.weather
   };
 
-  // <div data-utsuroi="city" data-lat data-lon data-weather="auto|clear|cloudy|drizzle|rain|shower|sunshower|snow|fog|thunder|off" data-time="ISO" data-base data-format data-fps data-ambient="off" data-view="緯度,経度">
+  // <div data-utsuroi="city" data-lat data-lon data-weather="auto|clear|cloudy|drizzle|rain|shower|sunshower|snow|fog|thunder|off" data-time="ISO" data-base data-format data-fps data-ambient="off" data-view="緯度,経度" data-place="地名|auto" data-weather-at="緯度,経度">
   function auto() {
-    var els = document.querySelectorAll('[data-utsuroi],[data-wallpaper]');   // data-wallpaper は旧名 (互換)
+    var els = document.querySelectorAll('[data-utsuroi]');
     for (var i = 0; i < els.length; i++) {
       var e = els[i], d = e.dataset;
       Utsuroi.mount(e, {
-        theme: d.utsuroi || d.wallpaper,
+        theme: d.utsuroi, place: d.place || undefined,
+        weatherAt: d.weatherAt ? d.weatherAt.split(',').map(Number) : undefined,   // data-weather-at="緯度,経度"
         lat: d.lat ? parseFloat(d.lat) : undefined, lon: d.lon ? parseFloat(d.lon) : undefined,
         weather: d.weather === 'off' ? null : (d.weather || 'auto'),
         date: d.time || null, base: d.base || undefined, format: d.format || undefined,

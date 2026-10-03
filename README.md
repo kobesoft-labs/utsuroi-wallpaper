@@ -20,7 +20,15 @@
 <script src="https://cdn.jsdelivr.net/gh/kobesoft-labs/utsuroi-wallpaper@1/dist/utsuroi.min.js"></script>
 ```
 
-これだけで、その場所(既定は神戸)の今の時刻・季節・天気の背景が動きます。画像も CDN から必要な分だけ読み込まれます。
+これだけで、今の時刻・季節・天気の背景が動きます。画像も CDN から必要な分だけ読み込まれます。
+
+場所は地名でも、緯度経度でも、閲覧者の現在地でも指定できます (指定が無ければ神戸)。
+
+```html
+<div data-utsuroi="city" data-place="札幌"></div>               <!-- 地名 (世界中の地名に対応) -->
+<div data-utsuroi="beach" data-lat="21.3" data-lon="-157.8"></div> <!-- 緯度経度 -->
+<div data-utsuroi="mountain" data-place="auto"></div>           <!-- 閲覧者の現在地 (位置情報の許可を求めます) -->
+```
 
 ### 壮大なログイン画面の例
 
@@ -81,7 +89,9 @@
 | 属性 | 意味 | 例 |
 |---|---|---|
 | `data-utsuroi` | テーマ ID | `harbor` |
-| `data-lat` / `data-lon` | 場所 (太陽・月・天気・季節の計算に使う)。既定は神戸 | `35.68` / `139.69` |
+| `data-place` | 場所を地名で。`auto` で閲覧者の現在地 | `札幌` / `Paris` / `auto` |
+| `data-lat` / `data-lon` | 場所を緯度経度で (太陽・月・季節・天気・地球の中心に使う)。既定は神戸 | `35.68` / `139.69` |
+| `data-weather-at` | 天気だけ別の場所にする (緯度,経度) | `43.06,141.35` |
 | `data-weather` | `auto` (実際の天気。既定) / `clear` `cloudy` `drizzle` `rain` `shower` `sunshower` `snow` `fog` `thunder` / `off` | `rain` |
 | `data-time` | 日時を固定 (ISO 形式)。無ければ現在時刻 | `2026-04-01T06:00` |
 | `data-view` | 地球テーマで中心に見る地点 (緯度,経度)。無ければ `data-lat`/`data-lon` | `51.5,-0.12` |
@@ -89,7 +99,7 @@
 | `data-fps` | 描画の上限 (既定 30) | `20` |
 | `data-base` | 画像を自分のサーバーに置く場合の場所 | `/assets/utsuroi/images/` |
 
-天気の `auto` は [Open-Meteo](https://open-meteo.com/) (キー不要) から取得し、15分ごとに更新します。
+天気の `auto` は [Open-Meteo](https://open-meteo.com/) (キー不要・世界中) から、指定した場所の天気を取得し、15分ごとに更新します。地名の検索は Open-Meteo の地名検索を使い、見つからない時は OpenStreetMap (Nominatim) で補います (結果はブラウザに保存し、同じ地名を繰り返し問い合わせません)。
 
 ## JavaScript から使う
 
@@ -100,7 +110,25 @@ wp.setTheme('temple');          // テーマを変える
 wp.setWeather('snow');          // 天気を固定 ('auto' で実際の天気に戻す)
 wp.setDate('2026-12-24T18:00'); // 日時を固定 (null で現在時刻)
 wp.setView(51.5, -0.12);        // 地球テーマの中心をロンドンに
+wp.setPlace('那覇');             // 場所を地名で変える (Promise)。'auto' で現在地
+wp.setLocation(43.06, 141.35);  // 場所を緯度経度で変える
 wp.destroy();                   // 片付け
+```
+
+### 自前の天気データにつなぐ
+
+社内の気象 API などを使う場合は、`weatherProvider` に「緯度・経度を受け取って天気を返す関数」を渡します。
+
+```js
+Utsuroi.mount('#bg', {
+  theme: 'office', lat: 35.68, lon: 139.69,
+  weatherProvider: async (lat, lon) => {
+    const r = await fetch(`/api/weather?lat=${lat}&lon=${lon}`).then((r) => r.json());
+    // 0〜1 の強さで返す (cloud 雲量 / rain 雨 / snow 雪 / fog 霧 / thunder 雷 / wind 風速 m/s)
+    return { cloud: r.cloudCover / 100, rain: r.rain ? 0.5 : 0, snow: 0, fog: 0, thunder: false, wind: r.windSpeed };
+    // WMO の天気コードを返す API なら: return Utsuroi.weather.fromWmo(r.code, r.cloudCover, r.windSpeed);
+  }
+});
 ```
 
 天体の計算だけを使うこともできます。
@@ -145,7 +173,7 @@ UtsuroiSky.mount('#hero', { lat: 34.69, lon: 135.19, horizon: 0.6, weather: 'aut
 
 ## 画像の作り方 (開発者向け)
 
-背景画像は OpenAI の画像 API で「同じ構図のまま」季節 × 時間帯に展開し、位置合わせしてから WebP にしています。
+背景画像は画像生成 API で「同じ構図のまま」季節 × 時間帯に展開し、位置合わせしてから WebP にしています。
 
 ```bash
 cp .env.example .env                 # OPENAI_API_KEY を記入
@@ -171,10 +199,9 @@ npm run build                        # dist/utsuroi.js, dist/utsuroi.min.js
 
 ## ライセンス
 
-[BSD 3-Clause License](LICENSE)。商用・非商用を問わず、ご自由にお使いください。
+[BSD 3-Clause License](LICENSE)。© 2026 神戸ソフト株式会社。商用・非商用を問わず、ご自由にお使いください。
 
-- 背景画像 (`images/` の地球以外): このプロジェクトのために OpenAI の画像 API で生成したもので、コードと同じ BSD 3-Clause で配布します
 - 地球の地図 (`images/earth/`): NASA Earth Observatory の Blue Marble Next Generation、Earth at Night 2012 (Black Marble)、Blue Marble clouds を元にしています (NASA の画像は原則パブリックドメイン。出典表記を推奨)
-- 天気: [Open-Meteo](https://open-meteo.com/)
+- 天気・地名検索: [Open-Meteo](https://open-meteo.com/) / 地名検索の補助: [OpenStreetMap Nominatim](https://nominatim.openstreetmap.org/) (© OpenStreetMap contributors)
 
-Made by [kobesoft-labs](https://github.com/kobesoft-labs).
+Made by 神戸ソフト株式会社 ([kobesoft-labs](https://github.com/kobesoft-labs)).
