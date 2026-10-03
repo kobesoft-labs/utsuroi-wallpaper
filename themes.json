@@ -1,0 +1,197 @@
+{
+  "style": "Wide cinematic landscape illustration, painterly semi-realistic, soft natural lighting, rich detail, calm uncluttered composition with a visually quiet center (suitable behind a login form), fixed tripod camera, 3:2 landscape. No text, no letters, no logos, no watermark, no close-up people. The sun and the moon must NOT be visible anywhere in the sky (they are composited separately). Keep a generous area of open sky in the upper part of the frame.",
+  "times": {
+    "day": "clear bright daytime, soft white clouds, warm natural light",
+    "dawn": "pre-sunrise dawn, the sun is still below the horizon, a peach and pink glow along the horizon on the LEFT (east) side fading to cool blue above, long soft shadows, a few lights still on",
+    "dusk": "just after sunset, the sun is below the horizon, an orange and magenta afterglow along the horizon on the RIGHT (west) side fading to deep blue above, lights beginning to turn on",
+    "night": "deep night with a clear starry sky and no moon, cool blue ambient light, artificial lights glowing warmly where appropriate"
+  },
+  "seasons": {
+    "spring": "spring: fresh light-green foliage, blossoms in bloom, soft hazy air",
+    "summer": "summer: lush deep-green vegetation, strong clear light, vivid blue sky",
+    "autumn": "autumn: red, orange and golden foliage, drier warmer light, fallen leaves",
+    "winter": "winter: bare branches, crisp cold air, frost, and snow where the climate allows"
+  },
+  "themes": {
+    "mountain": {
+      "name": "山",
+      "scene": "A serene alpine valley seen from a lakeside meadow: a calm mirror-like lake in the foreground, pine forest on both sides, layered snow-capped mountain ranges rising in the distance, a small wooden cabin on the right shore.",
+      "seasonNotes": {
+        "spring": "meadow flowers, snowmelt, mountains still white on top",
+        "summer": "green meadow, snow only on the highest peaks",
+        "autumn": "larch and birch in gold and red",
+        "winter": "frozen lake, heavy snow on trees and cabin roof"
+      },
+      "nightNote": "warm light in the cabin windows",
+      "water": "the lake"
+    },
+    "city": {
+      "name": "都会",
+      "scene": "A generic modern big-city skyline from an elevated riverside viewpoint: dense mid-rise buildings and a cluster of ordinary glass office towers of varying heights in the distance, a wide river with one plain road bridge, tree-lined embankments in the foreground. An everyday metropolis that could be anywhere: NO famous landmarks, NO broadcast towers, NO distinctive or iconic buildings, NO trains, NO railway, NO text.",
+      "seasonNotes": {
+        "spring": "cherry blossom trees along the river",
+        "summer": "bright green street trees, strong light",
+        "autumn": "ginkgo trees turning yellow along the river",
+        "winter": "bare trees, crisp clear air, a light dusting of snow"
+      },
+      "nightNote": "thousands of lit windows, glowing towers, light reflections on the river",
+      "water": "the river"
+    },
+    "harbor": {
+      "name": "港町",
+      "scene": "A generic harbor town seen from a hillside viewpoint: rows of ordinary low-rise houses and small apartment buildings climbing the hill in the foreground, a calm bay with a breakwater, container cranes and warehouses along the far shore, a few ferries and fishing boats on the water, low green hills in the distance. An ordinary everyday town that could be anywhere: NO famous landmarks, NO towers, NO distinctive or iconic bridges, NO distinctive buildings, NO text.",
+      "seasonNotes": {
+        "spring": "cherry blossom trees among the houses and fresh light-green hills",
+        "summer": "sparkling sea, deep green hills, strong clear light",
+        "autumn": "autumn color on the hills and garden trees",
+        "winter": "clear cold air, bare trees, a faint dusting of snow on the hilltops"
+      },
+      "nightNote": "warm lit windows on the hillside, glittering harbor lights reflecting on the bay, lit cranes",
+      "water": "the bay and harbor water"
+    },
+    "cyber": {
+      "name": "サイバー",
+      "scene": "A futuristic cyberpunk megacity seen from a rooftop terrace: towering skyscrapers with neon accents, abstract holographic signs (no readable text), elevated highways with light traffic, drones, layered fog between towers.",
+      "seasonNotes": {
+        "spring": "holographic cherry blossom petals drifting, pastel pink and cyan neon",
+        "summer": "hot hazy air, vivid magenta and teal neon, heat shimmer",
+        "autumn": "amber and orange neon tones, drifting digital leaves",
+        "winter": "icy blue and white neon, light snow in the neon glow"
+      },
+      "nightNote": "dense bright neon, glowing reflections, strong volumetric light",
+      "water": "any water or glossy wet street surface"
+    },
+    "beach": {
+      "name": "ビーチ",
+      "scene": "A tropical beach: palm trees on the left, white sand, turquoise shallow water, a distant island on the horizon, a wooden pier on the right, a couple of empty beach chairs and a parasol.",
+      "seasonNotes": {
+        "spring": "calm gentle sea, soft pastel light, a few flowers",
+        "summer": "intense turquoise water, bright white sand, high energy",
+        "autumn": "golden low light, calmer sea, fewer objects on the beach",
+        "winter": "cooler gray-blue sea, bigger waves, overcast softness, no snow"
+      },
+      "nightNote": "lanterns along the pier, gentle bioluminescent glow in the surf",
+      "water": "the sea and shallow water"
+    },
+    "home": {
+      "name": "家",
+      "layered": true,
+      "scene": "The view seen through a large window from inside a house, looking out over a private garden with a low wooden fence, a few garden trees, neighboring tiled rooftops and gentle green hills in the distance under a wide sky. The camera is fixed. Show ONLY the outdoor scenery filling the entire frame: NO window frame, NO curtains, NO interior, NO glass reflections.",
+      "seasonNotes": {
+        "spring": "cherry and plum blossoms in the garden, fresh light-green leaves",
+        "summer": "lush green garden and hills, hydrangea, strong clear light",
+        "autumn": "maple and persimmon trees in red and orange, golden grass",
+        "winter": "bare trees, snow on the garden, rooftops and hills"
+      },
+      "nightNote": "warm lit windows in the neighboring houses, a small garden lantern, distant town lights",
+      "inside": {
+        "scene": "A cozy Japanese-Scandinavian living room interior photographed straight on from the center of the room. A very large floor-to-ceiling window with thin frames fills the center and right of the frame, and the entire glass area is flat solid pure magenta #FF00FF. In the room: warm wooden floor, a sofa with cushions on the left, a leafy houseplant, a bookshelf, a low table with a cup, a soft rug.",
+        "props": {
+          "mild": "",
+          "summer": "Add an electric standing fan on the floor near the window, a glass of iced tea on the table, and light linen cushions.",
+          "winter": "Replace the low table with a kotatsu (a low table covered with a thick futon blanket, with a bowl of mikan oranges on top), put a knit blanket on the sofa, and add a soft warm glow of a small heater."
+        },
+        "times": {
+          "day": "bright daylight from the window, lamps off",
+          "dawn": "very early morning, dim cool blue ambient light, lamps off",
+          "dusk": "dusk, warm lamps and ceiling light turned on, cozy",
+          "night": "night, only warm lamps lit, cozy dim interior"
+        },
+        "despill": [
+          {
+            "name": "fan",
+            "box": [
+              0.66,
+              0.35,
+              0.8,
+              0.66
+            ],
+            "tone": [
+              1.12,
+              1.0,
+              0.86
+            ],
+            "force": 0.85
+          },
+          {
+            "name": "plant",
+            "box": [
+              0.1,
+              0.15,
+              0.36,
+              0.7
+            ],
+            "tone": [
+              0.82,
+              1.0,
+              0.66
+            ]
+          }
+        ]
+      }
+    },
+    "office": {
+      "name": "オフィス",
+      "layered": true,
+      "scene": "The view seen through a floor-to-ceiling window from inside a high-rise office, looking out over a city skyline with a river, bridges, mid-rise and tall buildings and distant mountains under a wide sky. The camera is fixed and the horizon is in the middle of the frame. Show ONLY the outdoor scenery filling the entire frame: NO window frame, NO blinds, NO interior, NO glass reflections.",
+      "seasonNotes": {
+        "spring": "cherry blossom trees along the river, soft hazy light",
+        "summer": "strong clear light, lush green trees, vivid blue sky",
+        "autumn": "ginkgo and maple trees in yellow and red along the river, golden light",
+        "winter": "clear cold air, bare trees, a dusting of snow on distant mountains"
+      },
+      "nightNote": "thousands of lit windows in the skyscrapers, glowing bridge lights reflected on the river",
+      "water": "the river",
+      "inside": {
+        "scene": "A modern open-plan office interior photographed straight on from the center of the room. A very large floor-to-ceiling window with thin frames fills the center and right of the frame, and the entire glass area is flat solid pure magenta #FF00FF. In the room: tidy white desks with dark monitors, ergonomic chairs, a long meeting table, potted plants, light wood flooring, ceiling lights.",
+        "props": {
+          "mild": "",
+          "summer": "Add a small desktop fan on a desk, glasses of iced coffee on the meeting table, and leave the blinds fully open.",
+          "winter": "Add a small decorated holiday tree in the corner, steaming mugs on the desks, and a coat rack with coats near the entrance."
+        },
+        "times": {
+          "day": "bright daylight from the window, ceiling lights on softly",
+          "dawn": "very early morning, dim cool blue ambient light, only a few lights on",
+          "dusk": "dusk, warm ceiling lights and desk lamps turned on",
+          "night": "night, office mostly dim with a few desk lamps lit, cool blue ambient light"
+        }
+      }
+    },
+    "earth": {
+      "name": "地球",
+      "scene": "A view from high in the sky looking down toward the curved horizon of Earth: continents, ocean, swirling clouds, a thin glowing atmosphere line, deep space above with a few faint stars.",
+      "seasonNotes": {
+        "spring": "greening land, retreating snow cover",
+        "summer": "deep green land, small clouds, vivid blue ocean",
+        "autumn": "brown and golden land, increasing cloud swirls",
+        "winter": "extensive white snow cover on land, big storm systems"
+      },
+      "nightNote": "the visible side is in darkness with glowing golden city lights and a faint aurora near the poles",
+      "noSky": true
+    },
+    "temple": {
+      "name": "寺",
+      "scene": "A tranquil Japanese temple precinct: a red-lacquered five-story pagoda and a wooden main hall on stone-paved grounds, stone lanterns, a vermilion gate, old maple and cherry trees, forested mountains behind.",
+      "seasonNotes": {
+        "spring": "full cherry blossoms, petals on the stone path",
+        "summer": "deep green maples, cicada-season haze, strong dappled light",
+        "autumn": "brilliant red maple leaves everywhere",
+        "winter": "snow on roofs and stone lanterns, quiet white courtyard"
+      },
+      "nightNote": "glowing paper lanterns, lit pagoda, soft mist"
+    },
+    "fantasy": {
+      "name": "ファンタジー",
+      "scene": "A storybook fantasy forest: a colossal ancient tree with a glowing hollow and a treehouse village in its branches, a winding path leading to it with a tiny distant traveler carrying a lantern, mossy stones, old ruins, a small waterfall, tiny forest spirits.",
+      "seasonNotes": {
+        "spring": "luminous blossoms and fresh leaves on the giant tree, baby animals",
+        "summer": "dense emerald canopy, shafts of light, fireflies hinted in shadows",
+        "autumn": "the giant tree glowing red and gold, falling leaves, spirits gathering",
+        "winter": "snow-covered forest, frost-lit crystals on the tree, warm lights in the treehouses"
+      },
+      "nightNote": "glowing mushrooms, magical lights in the tree, floating particles of light",
+      "water": "the small pond and waterfall pool"
+    }
+  },
+  "styleInterior": "Wide cinematic interior illustration, painterly semi-realistic, soft natural lighting, rich detail, calm uncluttered composition, fixed tripod camera, 3:2 landscape. No text, no letters, no logos, no watermark, no people. The window glass area must be a perfectly flat solid pure magenta color #FF00FF (no reflections, no curtain across it, no gradient, no magenta light spill onto the room surfaces)."
+}

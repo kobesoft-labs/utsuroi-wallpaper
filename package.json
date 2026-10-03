@@ -1,0 +1,51 @@
+{
+  "name": "utsuroi-wallpaper",
+  "version": "1.0.0",
+  "description": "季節・時間・天気で移ろうライブ壁紙 (Canvas / WebGL)。A Japanese-style live wallpaper that changes with the seasons, time of day and weather.",
+  "license": "BSD-3-Clause",
+  "author": "kobesoft-labs",
+  "homepage": "https://kobesoft-labs.github.io/utsuroi-wallpaper/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kobesoft-labs/utsuroi-wallpaper.git"
+  },
+  "bugs": {
+    "url": "https://github.com/kobesoft-labs/utsuroi-wallpaper/issues"
+  },
+  "keywords": [
+    "wallpaper",
+    "live-wallpaper",
+    "background",
+    "canvas",
+    "webgl",
+    "weather",
+    "seasons",
+    "sky",
+    "japan"
+  ],
+  "main": "dist/utsuroi.js",
+  "browser": "dist/utsuroi.min.js",
+  "unpkg": "dist/utsuroi.min.js",
+  "jsdelivr": "dist/utsuroi.min.js",
+  "files": [
+    "dist",
+    "src",
+    "images",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "scripts": {
+    "serve": "python3 tools/serve.py 8350",
+    "build": "node tools/build.mjs",
+    "plan": "node tools/generate.mjs --dry-run",
+    "generate": "node tools/generate.mjs",
+    "align": ".venv/bin/python tools/align.py",
+    "optimize": "node tools/optimize.mjs",
+    "earth": "node tools/build-earth.mjs"
+  },
+  "devDependencies": {
+    "sharp": "^0.35.5",
+    "esbuild": "^0.28.2"
+  }
+}

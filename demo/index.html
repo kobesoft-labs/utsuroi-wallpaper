@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>utsuroi-wallpaper デモ</title>
+<style>
+  html, body { margin: 0; height: 100%; font-family: system-ui, "Hiragino Sans", sans-serif; background: #111; }
+  #bg { position: fixed; inset: 0; }
+  .card { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); width: min(340px, 86vw); padding: 28px; border-radius: 16px;
+    background: rgba(255,255,255,.82); color: #222; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+  .card h1 { font-size: 18px; margin: 0 0 16px; }
+  .card input { width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; }
+  .card button { width: 100%; padding: 10px; border: 0; border-radius: 8px; background: #2563eb; color: #fff; font-size: 14px; }
+  .panel { position: fixed; left: 12px; right: 12px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 10px 14px;
+    border-radius: 12px; background: rgba(20,20,28,.8); color: #eee; font-size: 12px; }
+  .panel label { display: flex; align-items: center; gap: 6px; }
+  .panel input[type=range] { width: 150px; }
+  .panel select, .panel button { font-size: 12px; padding: 4px 8px; }
+  #info { margin-left: auto; opacity: .75; }
+</style>
+</head>
+<body>
+<!-- ① 背景にしたい要素に data-utsuroi="テーマID" を付けるだけ -->
+<div id="bg" data-utsuroi="mountain" data-weather="clear"></div>
+
+<div class="card">
+  <h1>ログイン</h1>
+  <input placeholder="メールアドレス"><input type="password" placeholder="パスワード"><button>ログイン</button>
+</div>
+
+<div class="panel">
+  <label>テーマ <select id="theme"></select></label>
+  <label>時刻 <input id="hour" type="range" min="0" max="24" step="0.05" value="12"><span id="hv"></span></label>
+  <label>日付 <input id="day" type="range" min="1" max="365" value="200"><span id="dv"></span></label>
+  <label>地球の中心 <select id="view"><option value="34.69,135.19">神戸</option><option value="35.68,139.69">東京</option><option value="51.5,-0.12">ロンドン</option><option value="40.71,-74.0">ニューヨーク</option><option value="-33.87,151.21">シドニー</option><option value="-22.9,-43.2">リオ</option></select></label>
+  <label>天気 <select id="weather"><option>clear</option><option>cloudy</option><option>drizzle</option><option>rain</option><option>shower</option><option>sunshower</option><option>snow</option><option>fog</option><option>thunder</option><option>auto</option></select></label>
+  <label><input id="live" type="checkbox"> 現在時刻</label>
+  <button id="lapse">1日を再生</button><button id="yearlapse">1年を再生</button>
+  <span id="info"></span>
+</div>
+
+<!-- ② スクリプトを読み込む (画像は ../images/<theme>/ から自動で読む。無ければ仮の絵を描く) -->
+<script src="../src/sky.js"></script>
+<script src="../src/globe.js"></script>
+<script src="../src/wallpaper.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () { // 自動マウント(ライブラリ側)の後に実行される
+  var wp = document.getElementById('bg').__lw;
+  var $ = function (id) { return document.getElementById(id); };
+  var themeSel = $('theme');
+  Object.keys(Utsuroi.themes).forEach(function (id) {
+    var o = document.createElement('option'); o.value = id; o.textContent = id + ' ' + Utsuroi.themes[id].name; themeSel.appendChild(o);
+  });
+  var timer = null;
+  function apply() {
+    var d = new Date(2026, 0, 1); d.setDate(+$('day').value);
+    var h = +$('hour').value; d.setHours(Math.floor(h), Math.round((h % 1) * 60), 0, 0);
+    wp.setDate($('live').checked ? null : d);
+    var hh = Math.floor(h), mm = Math.round((h % 1) * 60);
+    $('hv').textContent = ('0' + hh).slice(-2) + ':' + ('0' + mm).slice(-2);
+    $('dv').textContent = (d.getMonth() + 1) + '/' + d.getDate();
+    $('info').textContent = (function(){var t=UtsuroiSky.astro.sunTimes(d,wp.o.lat,wp.o.lon),mi=UtsuroiSky.astro.moonInfo(d),f=function(x){return x?('0'+x.getHours()).slice(-2)+':'+('0'+x.getMinutes()).slice(-2):'--'};return '日の出 '+f(t.sunrise)+' / 日の入り '+f(t.sunset)+' / '+mi.name+' (月齢 '+mi.age.toFixed(1)+')';})();
+  }
+  ['hour', 'day', 'live'].forEach(function (id) { $(id).addEventListener('input', function () { stop(); apply(); }); });
+  themeSel.onchange = function () { wp.setTheme(themeSel.value); };
+  $('weather').onchange = function () { wp.setWeather($('weather').value); };
+  $('view').onchange = function () { var v = $('view').value.split(',').map(Number); wp.setView(v[0], v[1]); };
+  function stop() { clearInterval(timer); timer = null; }
+  function lapse(id, max, step) { stop(); $('live').checked = false; timer = setInterval(function () { var v = (+$(id).value + step); $(id).value = v > max ? 0 : v; apply(); }, 33); }
+  $('lapse').onclick = function () { lapse('hour', 24, 0.04); };
+  $('yearlapse').onclick = function () { lapse('day', 365, 1.2); };
+  apply();
+});
+</script>
+</body>
+</html>

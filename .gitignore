@@ -1,0 +1,8 @@
+.env
+node_modules
+images-src
+.venv
+images-aligned
+images-src/_backup
+assets-src
+.DS_Store
