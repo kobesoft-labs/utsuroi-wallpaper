@@ -681,7 +681,7 @@
     var useMoon = moonB > nightB && moonB > dayB, colX = (useMoon || dayB > 0.05) ? this._pos(useMoon ? m : e.cel.sun).x : null;
     var tint = dayB > 0.25 ? mix3([246, 250, 255], [255, 214, 166], e.twi) : (useMoon ? [214, 226, 255] : [255, 214, 156]);
     var g = this.gl.getContext('2d'), hz = o.horizon, sec = e.sec, i;
-    g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.clearRect(0, 0, W, H); g.globalCompositeOperation = 'lighter';
+    g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; var y0 = Math.max(0, Math.floor(r.y + hz * r.h)), hh = H - y0; g.clearRect(0, y0, W, hh); g.globalCompositeOperation = 'lighter';   // 水面は地平線より下だけ。処理もそこだけ
     for (i = 0; i < this.glit.length; i++) {
       var s = this.glit[i];
       var flash = Math.sin(sec * s.sp + s.ph); if (flash <= 0.3) continue;           // 波の向きが合った一瞬だけ光る
@@ -697,9 +697,9 @@
       if (s.type === 0) g.drawImage(spr, x - sw / 2, y - sw * 0.06, sw, sw * 0.25);
       else { var d = (1.6 + 3.2 * s.t) * u * s.size; g.drawImage(spr, x - d / 2, y - d / 2, d, d); }
     }
-    g.globalAlpha = 1; g.globalCompositeOperation = 'source-atop'; g.fillStyle = rgba(tint, 0.75); g.fillRect(0, 0, W, H);
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-atop'; g.fillStyle = rgba(tint, 0.75); g.fillRect(0, y0, W, hh);
     g.globalCompositeOperation = 'destination-in'; g.drawImage(this.water, r.x, r.y, r.w, r.h);   // 水面の中だけ
-    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(this.gl, 0, 0); ctx.restore();
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(this.gl, 0, y0, W, hh, 0, y0, W, hh); ctx.restore();
   };
 
   // --- 光芒 (雲の切れ間から差す光)
@@ -810,7 +810,12 @@
   R._glass = function (ctx, e) {
     if (!this.o.glass) return;
     var a = e.wx.rain, kk = clamp((a - 0.1) / 0.5, 0, 1); if (kk < 0.02) return;
-    var W = this.W, H = this.H, u = Math.max(1, W / 1000), n = Math.round(this.pool.glass.length * kk), src = ctx.canvas, gb = this.glassBox, gs = this.glassScale || 1;
+    var W = this.W, H = this.H, u = Math.max(1, W / 1000), n = Math.round(this.pool.glass.length * kk), gb = this.glassBox, gs = this.glassScale || 1;
+    // 雫が映す景色は、半分の大きさの写しを数フレームに1度だけ撮って使い回す (描画中の画面そのものを毎回読み返すと重い)
+    var snap = this._gsnap || (this._gsnap = canvas(2, 2)), hw = Math.max(2, W >> 1), hh = Math.max(2, H >> 1);
+    if (snap.width !== hw || snap.height !== hh) { snap.width = hw; snap.height = hh; this._gsn = 0; }
+    if (!this._gsn) snap.getContext('2d').drawImage(ctx.canvas, 0, 0, hw, hh);
+    this._gsn = ((this._gsn || 0) + 1) % 6; var src = snap, S2 = 0.5;
     if (gb) { ctx.save(); ctx.beginPath(); ctx.rect(gb.x, gb.y, gb.w, gb.h); ctx.clip(); }
     for (var i = 0; i < n; i++) {
       var d = this.pool.glass[i], rr0 = d.r * u * gs;
@@ -830,7 +835,7 @@
       var x = d.x * W, y = d.y * H, rr = rr0 * shrink;
       ctx.save(); ctx.globalAlpha = al; ctx.beginPath(); ctx.ellipse(x, y, rr, rr * 1.18, 0, 0, TAU); ctx.clip();
       ctx.translate(x, y); ctx.rotate(Math.PI);
-      try { ctx.drawImage(src, x - rr * 1.9, y - rr * 2.2, rr * 3.8, rr * 4.4, -rr * 1.15, -rr * 1.35, rr * 2.3, rr * 2.7); } catch (err) { }
+      try { ctx.drawImage(src, (x - rr * 1.9) * S2, (y - rr * 2.2) * S2, rr * 3.8 * S2, rr * 4.4 * S2, -rr * 1.15, -rr * 1.35, rr * 2.3, rr * 2.7); } catch (err) { }
       ctx.restore();
       ctx.save(); ctx.globalAlpha = al;
       var gr = ctx.createRadialGradient(x - rr * 0.2, y - rr * 0.25, rr * 0.2, x, y, rr * 1.2);
