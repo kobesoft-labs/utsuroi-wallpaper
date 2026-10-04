@@ -9,7 +9,7 @@
 
 **デモ:** https://kobesoft-labs.github.io/utsuroi-wallpaper/ ・ [時刻・季節・天気を動かせるデモ](https://kobesoft-labs.github.io/utsuroi-wallpaper/demo/)
 
-> *English:* A Japanese-style live wallpaper for the web. Ten scenes (mountain, city, harbor, cyber, beach, home, office, earth, temple, fantasy) blend across seasons and time of day, with a real sun/moon, live weather (rain, snow, fog, thunder) and twinkle-free stars. One `<script>` and one `<div>`. BSD-3-Clause.
+> *English:* A Japanese-style live wallpaper for the web. Twelve scenes (mountain, city, harbor, Kobe, Tokyo, cyber, beach, home, office, earth, temple, fantasy) blend across seasons and time of day, with a real sun/moon, live weather (rain, snow, fog, thunder) and twinkle-free stars. One `<script>` and one `<div>`. BSD-3-Clause.
 
 ---
 
@@ -76,6 +76,8 @@
 | `mountain` | 山 | 湖と雪山。夏の夜はホタル |
 | `city` | 都会 | 川と高層ビル群 (どこかにありそうな街) |
 | `harbor` | 港町 | 坂の家並みと湾 (どこかにありそうな街) |
+| `kobe` | 神戸 | 神戸港とポートタワー、背後に六甲の山並み (実在の景色。写真を元に作成) |
+| `tokyo` | 東京 | 東京タワーと高層ビル群、遠くに富士山 (実在の景色。写真を元に作成) |
 | `cyber` | サイバー | ネオンの未来都市 |
 | `beach` | ビーチ | 南の島の海辺 |
 | `home` | 家 | 窓の外は季節と天気、部屋の中は時間で照明が変わる。夏は扇風機、冬はコタツ |
@@ -202,6 +204,7 @@ npm run build                        # dist/utsuroi.js, dist/utsuroi.min.js
 [BSD 3-Clause License](LICENSE)。© 2026 神戸ソフト株式会社。商用・非商用を問わず、ご自由にお使いください。
 
 - 地球の地図 (`images/earth/`): NASA Earth Observatory の Blue Marble Next Generation、Earth at Night 2012 (Black Marble)、Blue Marble clouds を元にしています (NASA の画像は原則パブリックドメイン。出典表記を推奨)
+- 神戸・東京の絵 (`images/kobe/`, `images/tokyo/`): [Unsplash](https://unsplash.com/) の写真 (Unsplash License: 加工・再配布可) を元に、AI で絵に描き直し、写真の形に位置合わせしています。神戸: PJH ([写真](https://unsplash.com/photos/TB5VZmRob2I))、東京: Clement Souchet ([写真](https://unsplash.com/photos/FVK-lpEc-Bc))
 - 天気・地名検索: [Open-Meteo](https://open-meteo.com/) / 地名検索の補助: [OpenStreetMap Nominatim](https://nominatim.openstreetmap.org/) (© OpenStreetMap contributors)
 
 Made by 神戸ソフト株式会社 ([kobesoft-labs](https://github.com/kobesoft-labs)).

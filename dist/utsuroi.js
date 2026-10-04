@@ -1,4 +1,4 @@
-/*! utsuroi-wallpaper v1.1.0 | BSD-3-Clause | https://github.com/kobesoft-labs/utsuroi-wallpaper */
+/*! utsuroi-wallpaper v1.1.1 | BSD-3-Clause | https://github.com/kobesoft-labs/utsuroi-wallpaper */
 /*!
  * Utsuroi Sky — 太陽・月・星・雲・天気 を Canvas で描く、背景画像に依存しないライブラリ
  *
@@ -1289,6 +1289,8 @@
     mountain: { name: '山',         horizon: 0.50, top: 0.08, ground: [70, 110, 80] },
     city:     { name: '都会',       horizon: 0.58, top: 0.08, ground: [70, 75, 95],  city: true },
     harbor:   { name: '港町',       horizon: 0.55, top: 0.08, ground: [80, 95, 110], city: true },
+    kobe:     { name: '神戸',       horizon: 0.62, top: 0.08, ground: [90, 105, 120], city: true },
+    tokyo:    { name: '東京',       horizon: 0.42, top: 0.08, ground: [120, 125, 140], city: true },
     cyber:    { name: 'サイバー',   horizon: 0.55, top: 0.08, ground: [50, 40, 90],  city: true },
     beach:    { name: 'ビーチ',     horizon: 0.50, top: 0.08, ground: [225, 205, 160] },
     home:     { name: '家',         horizon: 0.55, top: 0.12, ground: [150, 120, 95], layered: true, glass: { box: [0.25, 0.03, 0.99, 0.64], scale: 0.5 } },   // glass: 窓ガラスの範囲 (遠い窓なので水滴は範囲内に小さく)   // 窓の外(季節×時間) + 屋内(時間 + 小物の有無)

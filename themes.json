@@ -191,6 +191,31 @@
       },
       "nightNote": "glowing mushrooms, magical lights in the tree, floating particles of light",
       "water": "the small pond and waterfall pool"
+    },
+    "kobe": {
+      "name": "神戸",
+      "photo": "photos-src/kobe/photo.png",
+      "scene": "The Kobe waterfront seen across the harbor from the Meriken Park pier: a calm bay in the foreground, the red lattice Kobe Port Tower, a tall hotel tower, the white sail-shaped museum roof, low waterfront buildings, and the Rokko mountain range rising behind the city.",
+      "seasonNotes": {
+        "spring": "fresh light-green Rokko hills, soft hazy air",
+        "summer": "deep green hills, sparkling water, strong clear light",
+        "autumn": "hills with red and golden color, dry warm light",
+        "winter": "clear cold air, a faint dusting of snow on the hill tops"
+      },
+      "nightNote": "lit windows in the towers, the Port Tower softly lit, glittering harbor lights reflecting on the water",
+      "water": "the harbor water"
+    },
+    "tokyo": {
+      "name": "東京",
+      "photo": "photos-src/tokyo/photo.png",
+      "scene": "A dense Tokyo cityscape seen from an elevated viewpoint: a sea of mid-rise buildings and glass towers, the red-and-white Tokyo Tower at left, trees of a park among the buildings, a distant Mount Fuji silhouette on the horizon.",
+      "seasonNotes": {
+        "spring": "cherry blossom trees in the park, soft hazy air",
+        "summer": "lush green park trees, strong clear light, vivid blue sky",
+        "autumn": "ginkgo and maple trees turning yellow and red, clear dry air",
+        "winter": "bare trees, crisp clear air, Mount Fuji with a snowy top"
+      },
+      "nightNote": "thousands of lit windows, the tower glowing orange, glowing office towers"
     }
   },
   "styleInterior": "Wide cinematic interior illustration, painterly semi-realistic, soft natural lighting, rich detail, calm uncluttered composition, fixed tripod camera, 3:2 landscape. No text, no letters, no logos, no watermark, no people. The window glass area must be a perfectly flat solid pure magenta color #FF00FF (no reflections, no curtain across it, no gradient, no magenta light spill onto the room surfaces)."

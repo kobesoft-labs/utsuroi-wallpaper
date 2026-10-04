@@ -29,6 +29,7 @@ const SIZE = args.size || '1536x1024';
 const CONCURRENCY = Number(args.concurrency || 3);
 const themeIds = (args.theme ? String(args.theme).split(',') : Object.keys(cfg.themes));
 const withMask = !args['no-mask'];
+const onlyStage = args.stage ? Number(args.stage) : null;   // 指定した段階だけ作る (写真が元のテーマは、段階1のあとに写真へ位置合わせしてから次へ)
 const SEASONS = ['spring', 'summer', 'autumn', 'winter'];
 const TIMES = ['dawn', 'dusk', 'night'];
 
@@ -38,7 +39,10 @@ function jobs(id) {
   const t = cfg.themes[id], list = [];
   if (t.globe) return list;   // 地球は NASA の実データを WebGL で描く (tools/build-earth.mjs)
   const out = (name) => path.join(root, 'images', id, name + '.png');
-  list.push({ stage: 1, file: out('summer-day'), kind: 'generate',
+  // 写真が元のテーマ: 実写を「絵」に描き直す (形・位置は写真のまま)。そのあと align.py --pair で写真に合わせ直す
+  if (t.photo) list.push({ stage: 1, file: out('summer-day'), kind: 'edit', from: path.join(root, t.photo),
+    prompt: `Redraw this photograph as a wide cinematic painterly semi-realistic illustration. ${t.scene} Season: ${cfg.seasons.summer}; ${t.seasonNotes.summer}. Time of day: ${cfg.times.day}; make it a clear bright daytime with a vivid blue sky and a few soft white clouds (the photo was taken near sunset: remove the sunset colors). Remove all people, flags, text, signs and logos. ${KEEP} Keep every building, tower, hill and shoreline at exactly the same position, size and outline as in the photograph, with no distortion, no bending of straight lines and no added or removed buildings. The sun and the moon must NOT be visible. Keep a generous area of open sky in the upper part of the frame. No text, no letters, no logos, no watermark.` });
+  else list.push({ stage: 1, file: out('summer-day'), kind: 'generate',
     prompt: `${t.scene} ${cfg.seasons.summer}; ${t.seasonNotes.summer}. Time of day: ${cfg.times.day}. ${cfg.style}` });
   for (const s of SEASONS.filter((s) => s !== 'summer')) list.push({ stage: 2, file: out(`${s}-day`), kind: 'edit', from: out('summer-day'),
     prompt: `Change the season from summer to ${cfg.seasons[s]}; ${t.seasonNotes[s]}. Keep the clear daytime lighting. ${KEEP} ${cfg.style}` });
@@ -104,7 +108,7 @@ async function pool(items, n, fn) { const q = [...items]; await Promise.all(Arra
 // --- 実行 ---
 const all = themeIds.flatMap((id) => { if (!cfg.themes[id]) { console.error('unknown theme:', id); process.exit(1); } return jobs(id); });
 const todo = [];
-for (const j of all) if (args.only && j.tag !== args.only) continue; else if (args.force || !(await has(j.file))) todo.push(j);
+for (const j of all) if (args.only && j.tag !== args.only) continue; else if (onlyStage && j.stage !== onlyStage) continue; else if (args.force || !(await has(j.file))) todo.push(j);
 console.log(`model=${MODEL} quality=${QUALITY} size=${SIZE}  テーマ:${themeIds.join(',')}  生成予定 ${todo.length}/${all.length} 枚`);
 if (args['dry-run']) { todo.forEach((j) => console.log(' ', path.relative(root, j.file), j.kind)); process.exit(0); }
 if (!KEY) { console.error('OPENAI_API_KEY が未設定です (.env か環境変数)'); process.exit(1); }
