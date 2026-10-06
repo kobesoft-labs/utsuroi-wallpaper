@@ -330,7 +330,7 @@
     var g = wc.getContext('2d'), u = Math.max(1, W / 1000), step = Math.max(2, Math.round(H / 240)), swell = 0.8 + 0.2 * Math.sin(sec * 0.17);
     g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, hh);
     for (var y = 0; y < hh; y += step) {
-      var d = y / hh, ph = 62 * Math.sqrt(d + 0.02), amp = u * (0.2 + 2.6 * Math.pow(d, 1.3)) * swell;
+      var d = y / hh, ph = 62 * Math.sqrt(d + 0.02), amp = u * (0.3 + 3.9 * Math.pow(d, 1.3)) * swell;
       var off = amp * (0.62 * Math.sin(ph - sec * 0.6) + 0.38 * Math.sin(ph * 1.9 + sec * 1.1 + 1.7 * Math.sin(sec * 0.23)));
       var dy = u * (0.4 + 2.2 * d) * Math.sin(ph * 1.3 - sec * 1.9 + 0.8), sy = clamp(y0 + y + dy, 0, H - step);   // 上下にも少し (波の山で映り込みが伸び縮みする)
       g.drawImage(this.scene, 0, sy, W, step, off, y, W, step);
@@ -350,10 +350,10 @@
     ' vec2 k0=vec2(.94,.34);vec2 k1=vec2(-.55,.83);vec2 k2=vec2(.2,.98);vec2 k3=vec2(-.9,.44);' +
     ' g+=k0*cos(dot(k0,p)*3.1+T*.2)*.55*3.1; g+=k1*cos(dot(k1,p)*5.3+T*.27+1.7)*.4*5.3;' +
     ' g+=k2*cos(dot(k2,p)*8.7-T*.35+.6)*.28*8.7; g+=k3*cos(dot(k3,p)*13.9+T*.46+2.9)*.16*13.9;' +
-    ' float sc=.00075*(.03+pow(d,1.5)*1.15); vec2 uv=v+vec2(g.x*sc*1.5,-g.y*sc*.55);' +
+    ' float sc=.00113*(.03+pow(d,1.5)*1.15); vec2 uv=v+vec2(g.x*sc*1.5,-g.y*sc*.55);' +
     ' if(texture2D(M,uv).a<.5)uv=v;' +
     ' vec3 c=texture2D(S,uv).rgb; float sl=g.x*.45+g.y*.6;' +
-    ' c*=1.+sl*.014*(.2+d); c+=vec3(.9,.95,1.)*pow(max(sl*.12,0.),2.)*L*(.4+d*.6);' +
+    ' c*=1.+sl*.02*(.2+d); c+=vec3(.9,.95,1.)*pow(max(sl*.12,0.),2.)*L*(.4+d*.6);' +
     ' float al=texture2D(M,v).a; gl_FragColor=vec4(c*al,al);}';
   P._waveGL = function (ctx, sec, env) {
     var r = this.xrect, W = this.W, H = this.H, y0 = Math.max(0, Math.floor(r.y + this.T.horizon * r.h)), y1 = Math.min(H, Math.ceil(r.y + r.h)), hh = y1 - y0;
