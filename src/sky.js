@@ -948,7 +948,7 @@
       ctx.globalAlpha = Math.min(0.8, a); ctx.drawImage(m.spr, p.x * W - sz / 2, p.y * H - sz / 2, sz, sz);
     }
     ctx.fillStyle = 'rgb(28,30,34)';
-    for (i = 0; i < m.bugs.length; i++) {
+    for (i = 0; this.o.bugs && i < m.bugs.length; i++) {   // 虫は山とファンタジーだけ (テーマの bugs: true)
       p = m.bugs[i]; p.t += dt;
       if (p.dur === 0 || p.t >= p.dur + p.hold) {                                // 次の行き先へ (たまに遠く、たいてい近く)
         p.fx = p.x; p.fy = p.y; p.t = 0; p.dur = 0.5 + Math.random() * 1.1; p.hold = 0.4 + Math.random() * 2.2;

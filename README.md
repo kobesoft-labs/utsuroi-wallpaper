@@ -97,7 +97,7 @@
 | `data-weather` | `auto` (実際の天気。既定) / `clear` `cloudy` `drizzle` `rain` `shower` `sunshower` `snow` `fog` `thunder` / `off` | `rain` |
 | `data-time` | 日時を固定 (ISO 形式)。無ければ現在時刻 | `2026-04-01T06:00` |
 | `data-view` | 地球テーマで中心に見る地点 (緯度,経度)。無ければ `data-lat`/`data-lon` | `51.5,-0.12` |
-| `data-ambient` | `off` で花びら・落ち葉・ホタル・昼のホコリと虫を止める | `off` |
+| `data-ambient` | `off` で花びら・落ち葉・ホタル・昼のホコリ(山とファンタジーは虫も)を止める | `off` |
 | `data-waves` | `off` で水面のゆらぎを止める (水面マスクのあるテーマだけ。軽い処理で、1フレームあたり 0.5ms 前後) | `off` |
 | `data-fps` | 描画の上限 (既定 30) | `20` |
 | `data-base` | 画像を自分のサーバーに置く場合の場所 | `/assets/utsuroi/images/` |

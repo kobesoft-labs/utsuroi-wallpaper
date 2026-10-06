@@ -18,7 +18,7 @@
   // celestial: false なら太陽・月を描かない (地球テーマ)
   // ground / city : 画像が無い時のプレースホルダー用
   var THEMES = {
-    mountain: { name: '山',         horizon: 0.50, top: 0.08, ground: [70, 110, 80] },
+    mountain: { name: '山', bugs: true,         horizon: 0.50, top: 0.08, ground: [70, 110, 80] },
     city:     { name: '都会',       horizon: 0.58, top: 0.08, ground: [70, 75, 95],  city: true },
     harbor:   { name: '港町',       horizon: 0.55, top: 0.08, ground: [80, 95, 110], city: true },
     kobe:     { name: '神戸',       horizon: 0.62, top: 0.08, ground: [90, 105, 120], city: true },
@@ -29,7 +29,7 @@
     office:   { name: 'オフィス', waves: false,   horizon: 0.55, top: 0.12, ground: [110, 115, 125], city: true, layered: true, outsideShift: 0.1, glass: { box: [0.17, 0.09, 0.97, 0.55], scale: 0.5 } },   // 窓の外の絵を上へずらし、窓の下端に街並みを見せる
     earth:    { name: '地球',       horizon: 0.60, top: 0.10, ground: [40, 90, 140], celestial: false, noSky: true, globe: true },   // NASA の実データで球体を描く (globe.js)   // 空から見た景色: 空の合成・天気は使わない
     temple:   { name: '寺',         horizon: 0.55, top: 0.08, ground: [95, 100, 85] },
-    fantasy:  { name: 'ファンタジー', waves: false, mist: [{ x: 0.76, y: 0.93, w: 0.11, s: 1 }, { x: 0.835, y: 0.775, w: 0.06, s: 0.8 }, { x: 0.30, y: 0.675, w: 0.03, s: 0.45 }, { x: 0.425, y: 0.645, w: 0.025, s: 0.4 }],   // 滝つぼの水煙 (画像に対する割合)
+    fantasy:  { name: 'ファンタジー', waves: false, bugs: true, mist: [{ x: 0.76, y: 0.93, w: 0.11, s: 1 }, { x: 0.835, y: 0.775, w: 0.06, s: 0.8 }, { x: 0.30, y: 0.675, w: 0.03, s: 0.45 }, { x: 0.425, y: 0.645, w: 0.025, s: 0.4 }],   // 滝つぼの水煙 (画像に対する割合)
     horizon: 0.55, top: 0.08, ground: [40, 90, 70] }
   };
   var TIMES = ['day', 'dawn', 'dusk', 'night'];
@@ -399,7 +399,7 @@
     var t0 = performance.now();
     var dt = Math.min(0.1, (t - this.last) / 1000); this.last = t;
     var date = this.o.date || new Date(), o = this.o;
-    this.sky.o.lat = o.lat; this.sky.o.lon = o.lon; this.sky.o.ambient = o.ambient;
+    this.sky.o.bugs = !!this.T.bugs; this.sky.o.lat = o.lat; this.sky.o.lon = o.lon; this.sky.o.ambient = o.ambient;
 
     var cel = Sky.astro.celestial(date, o.lat, o.lon);
     var sb = Sky.util.seasonBlend(date, o.lat, o.transitions), tb = Sky.util.timeBlend(cel.sun.alt, cel.sun.morning);
