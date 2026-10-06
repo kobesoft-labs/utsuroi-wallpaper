@@ -203,7 +203,9 @@
         "winter": "clear cold air, a faint dusting of snow on the hill tops"
       },
       "nightNote": "lit windows in the towers, the Port Tower softly lit, glittering harbor lights reflecting on the water",
-      "water": "the harbor water"
+      "water": "the harbor water",
+      "extraKeep": "The tall hotel tower on the right of the Port Tower is a perfectly straight rectangular slab with vertical sides and a flat top; the red lattice Port Tower is a symmetric hyperboloid; the white museum roof and the arched bridge keep their exact shapes.",
+      "noAlign": true
     },
     "tokyo": {
       "name": "東京",

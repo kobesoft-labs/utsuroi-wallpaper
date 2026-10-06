@@ -434,6 +434,7 @@
     this.rect = rect || { x: 0, y: 0, w: W, h: H };
   };
   R.setGlass = function (box, scale) { this.glassBox = box || null; this.glassScale = scale || 1; };   // 窓ガラスの範囲(px)。遠い窓では水滴をその中だけに小さく出す
+  R.setMist = function (list) { this.mist = list ? list.map(function (m) { var r = rng(Math.round(m.x * 1000) + 3), parts = [], n = Math.round(10 + 14 * m.s); for (var i = 0; i < n; i++) parts.push({ age: r() * 6, life: 4 + r() * 3.5, ox: r() - 0.5, sz: 0.7 + r() * 0.8, sp: 0.6 + r() * 0.8, ph: r() * 6.28 }); return { x: m.x, y: m.y, w: m.w, s: m.s, parts: parts }; }) : null; };   // 滝つぼの水煙の湧き出し口 (画像に対する割合)
   R.setWater = function (img) { this.water = img || null; };   // 水面マスク (アルファ=水面)。海・湖・川のきらめきをその中だけに描く
   R.setSkyMask = function (c) { this.mask = c; };       // W×H の canvas。アルファ=空
   R.setCloudMatte = function (c) { this.matte = c; };   // W×H の canvas。アルファ=雲の濃さ (天体を雲の後ろに回す)
@@ -464,7 +465,9 @@
     this._glitter(ctx, env);
     this._rays(ctx, env);
     this._fog(ctx, env);
+    this._mist(ctx, env);
     if (o.ambient && st.seasons) this._ambient(ctx, env, st.seasons);
+    if (o.ambient) this._motes(ctx, env);
     this._rain(ctx, env);
     this._snow(ctx, env);
     this._glass(ctx, env);
@@ -898,6 +901,71 @@
     }
   };
 
+
+  // --- 滝の水煙: 滝つぼから湧いて、ゆっくり立ちのぼり、ふくらみながら薄れていく白いもや
+  R._mist = function (ctx, e) {
+    var ms = this.mist; if (!ms) return;
+    var wx = e.wx, r = this.rect, u = Math.max(1, this.W / 1000), dt = Math.min(e.dt, 0.1);
+    var k = (0.45 + 0.55 * clamp(e.day + e.twi * 0.5, 0, 1)) * (1 + wx.rain * 0.3);
+    var spr = this._mistSpr || (this._mistSpr = (function () { var c = canvas(64, 64), g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,0.9)'); gr.addColorStop(0.45, 'rgba(255,255,255,0.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return c; })());
+    ctx.save();
+    for (var i = 0; i < ms.length; i++) {
+      var m = ms[i], bx = r.x + m.x * r.w, by = r.y + m.y * r.h, W0 = m.w * r.w;
+      for (var j = 0; j < m.parts.length; j++) {
+        var p = m.parts[j]; p.age += dt * p.sp;
+        if (p.age >= p.life) { p.age = 0; p.life = 4 + Math.random() * 3.5; p.ox = Math.random() - 0.5; p.sz = 0.7 + Math.random() * 0.8; p.sp = 0.6 + Math.random() * 0.8; }
+        var t = p.age / p.life, a = Math.sin(Math.PI * Math.pow(t, 0.7)) * 0.2 * k * (0.5 + 0.5 * m.s);   // ふわっと現れて、ゆっくり消える
+        if (a < 0.01) continue;
+        var x = bx + p.ox * W0 + Math.sin(e.sec * 0.35 + p.ph) * W0 * 0.12 * t + t * (4 + wx.wind * 3) * u, y = by - t * (0.07 + 0.05 * m.s) * r.h, sz = (W0 * 0.7 + t * W0 * 1.1) * p.sz;
+        ctx.globalAlpha = Math.min(0.5, a); ctx.drawImage(spr, x - sz / 2, y - sz / 2, sz, sz);
+      }
+    }
+    ctx.restore();
+  };
+
+  // --- 昼の空気の動き: 光の中を漂うホコリ(綿毛) と、ときどき横切る小さな虫。何も起きない平日の昼でも画面が静止画にならないように。
+  //     ホコリは風にゆっくり流れ、光を拾った一瞬だけ白く光る。虫は止まって(ホバリング)は、すっと別の場所へ飛ぶ
+  R._motes = function (ctx, e) {
+    var wx = e.wx; if (wx.rain > 0.15 || wx.snow > 0.15) return;
+    var k = smooth(2, 14, e.alt) * (1 - wx.cloud * 0.5) * (1 - wx.fog * 0.6); if (k < 0.05) return;
+    var W = this.W, H = this.H, u = Math.max(1, W / 1000), m = this.motes, i, p, sec = e.sec, dt = Math.min(e.dt, 0.1);
+    if (!m) {
+      var r = rng(77); m = this.motes = { dust: [], bugs: [], spr: canvas(24, 24) };
+      for (i = 0; i < 26; i++) m.dust.push({ x: r(), y: 0.08 + r() * 0.84, z: r(), ph: r() * 6.283, sp: 0.5 + r() });
+      for (i = 0; i < 4; i++) m.bugs.push({ x: r(), y: 0.2 + r() * 0.5, fx: 0, fy: 0, tx: 0, ty: 0, t: 0, dur: 0, hold: r() * 2, z: 0.5 + r() * 0.5, ph: r() * 6 });
+      var g = m.spr.getContext('2d'), gr = g.createRadialGradient(12, 12, 0, 12, 12, 12);
+      gr.addColorStop(0, 'rgba(255,248,228,1)'); gr.addColorStop(0.35, 'rgba(255,246,222,0.45)'); gr.addColorStop(1, 'rgba(255,244,220,0)');
+      g.fillStyle = gr; g.fillRect(0, 0, 24, 24);
+    }
+    ctx.save();
+    for (i = 0; i < m.dust.length; i++) {
+      p = m.dust[i];
+      p.x += dt * (0.004 + wx.wind * 0.0014) * (0.4 + p.z) + Math.sin(sec * 0.31 * p.sp + p.ph) * dt * 0.004;
+      p.y += Math.cos(sec * 0.23 * p.sp + p.ph * 1.3) * dt * 0.003 - dt * 0.0012;
+      if (p.y < 0.04) p.y = 0.96; p.x = (p.x + 1) % 1;
+      var tw = 0.25 + 0.75 * Math.pow(Math.max(0, Math.sin(sec * 0.9 * p.sp + p.ph * 2)), 3), a = k * 0.55 * tw * (0.3 + 0.7 * p.z), sz = (3 + 9 * p.z) * u;
+      if (a < 0.02) continue;
+      ctx.globalAlpha = Math.min(0.8, a); ctx.drawImage(m.spr, p.x * W - sz / 2, p.y * H - sz / 2, sz, sz);
+    }
+    ctx.fillStyle = 'rgb(28,30,34)';
+    for (i = 0; i < m.bugs.length; i++) {
+      p = m.bugs[i]; p.t += dt;
+      if (p.dur === 0 || p.t >= p.dur + p.hold) {                                // 次の行き先へ (たまに遠く、たいてい近く)
+        p.fx = p.x; p.fy = p.y; p.t = 0; p.dur = 0.5 + Math.random() * 1.1; p.hold = 0.4 + Math.random() * 2.2;
+        var far = Math.random() < 0.3;
+        p.tx = clamp(p.x + (Math.random() - 0.5) * (far ? 0.7 : 0.18), -0.05, 1.05); p.ty = clamp(p.y + (Math.random() - 0.5) * (far ? 0.4 : 0.12), 0.1, 0.9);
+      }
+      var f = clamp(p.t / p.dur, 0, 1), ef = f * f * (3 - 2 * f); p.x = p.fx + (p.tx - p.fx) * ef; p.y = p.fy + (p.ty - p.fy) * ef;
+      var flying = f < 1, bx = p.x * W + Math.sin(sec * 31 + p.ph) * (flying ? 1.1 : 0.5) * u, by = p.y * H + Math.cos(sec * 27 + p.ph) * (flying ? 1.1 : 0.6) * u + Math.sin(sec * 2.1 + p.ph) * 1.2 * u;
+      var ang = Math.atan2(p.ty - p.fy, p.tx - p.fx), s2 = (1.5 + 1.6 * p.z) * u;
+      ctx.globalAlpha = Math.min(0.75, k * 0.8);
+      ctx.beginPath(); ctx.ellipse(bx, by, s2 * 1.1, s2 * 0.7, ang, 0, TAU); ctx.fill();
+      ctx.globalAlpha = Math.min(0.3, k * 0.35) * (0.5 + 0.5 * Math.sin(sec * 90 + p.ph));   // 羽のぼやけ
+      ctx.beginPath(); ctx.ellipse(bx - Math.sin(ang) * s2 * 0.4, by + Math.cos(ang) * s2 * 0.4, s2 * 1.5, s2 * 0.5, ang + 1.2, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+  };
+
   // ------------------------------------------------------------------ 単体で使う: 任意の要素の上に空を重ねる
   function mount(target, opts) {
     var el = typeof target === 'string' ? document.querySelector(target) : target;
@@ -931,7 +999,7 @@
     if (o.place) geocode(o.place).then(function (p) { rd.o.lat = p.lat; rd.o.lon = p.lon; if (o.weather === 'auto') api.setWeather('auto'); }).catch(function (e) { console.warn('[UtsuroiSky]', e.message); });
     function tick(t) {
       if (!running) return; raf = requestAnimationFrame(tick);
-      if (document.hidden || !visible || t - last < 1000 / o.fps) return;
+      if (document.hidden || !visible || t - last < 1000 / o.fps - 3) return;
       var dt = (t - last) / 1000; last = t; var date = o.date || new Date();
       ctx.clearRect(0, 0, cv.width, cv.height);
       rd.render(ctx, { date: date, t: t / 1000, dt: dt, seasons: seasonBlend(date, rd.o.lat, o.transitions) });

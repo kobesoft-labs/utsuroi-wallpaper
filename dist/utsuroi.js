@@ -1,4 +1,4 @@
-/*! utsuroi-wallpaper v1.1.1 | BSD-3-Clause | https://github.com/kobesoft-labs/utsuroi-wallpaper */
+/*! utsuroi-wallpaper v1.2.0 | BSD-3-Clause | https://github.com/kobesoft-labs/utsuroi-wallpaper */
 /*!
  * Utsuroi Sky — 太陽・月・星・雲・天気 を Canvas で描く、背景画像に依存しないライブラリ
  *
@@ -435,6 +435,7 @@
     this.rect = rect || { x: 0, y: 0, w: W, h: H };
   };
   R.setGlass = function (box, scale) { this.glassBox = box || null; this.glassScale = scale || 1; };   // 窓ガラスの範囲(px)。遠い窓では水滴をその中だけに小さく出す
+  R.setMist = function (list) { this.mist = list ? list.map(function (m) { var r = rng(Math.round(m.x * 1000) + 3), parts = [], n = Math.round(10 + 14 * m.s); for (var i = 0; i < n; i++) parts.push({ age: r() * 6, life: 4 + r() * 3.5, ox: r() - 0.5, sz: 0.7 + r() * 0.8, sp: 0.6 + r() * 0.8, ph: r() * 6.28 }); return { x: m.x, y: m.y, w: m.w, s: m.s, parts: parts }; }) : null; };   // 滝つぼの水煙の湧き出し口 (画像に対する割合)
   R.setWater = function (img) { this.water = img || null; };   // 水面マスク (アルファ=水面)。海・湖・川のきらめきをその中だけに描く
   R.setSkyMask = function (c) { this.mask = c; };       // W×H の canvas。アルファ=空
   R.setCloudMatte = function (c) { this.matte = c; };   // W×H の canvas。アルファ=雲の濃さ (天体を雲の後ろに回す)
@@ -465,7 +466,9 @@
     this._glitter(ctx, env);
     this._rays(ctx, env);
     this._fog(ctx, env);
+    this._mist(ctx, env);
     if (o.ambient && st.seasons) this._ambient(ctx, env, st.seasons);
+    if (o.ambient) this._motes(ctx, env);
     this._rain(ctx, env);
     this._snow(ctx, env);
     this._glass(ctx, env);
@@ -899,6 +902,71 @@
     }
   };
 
+
+  // --- 滝の水煙: 滝つぼから湧いて、ゆっくり立ちのぼり、ふくらみながら薄れていく白いもや
+  R._mist = function (ctx, e) {
+    var ms = this.mist; if (!ms) return;
+    var wx = e.wx, r = this.rect, u = Math.max(1, this.W / 1000), dt = Math.min(e.dt, 0.1);
+    var k = (0.45 + 0.55 * clamp(e.day + e.twi * 0.5, 0, 1)) * (1 + wx.rain * 0.3);
+    var spr = this._mistSpr || (this._mistSpr = (function () { var c = canvas(64, 64), g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,0.9)'); gr.addColorStop(0.45, 'rgba(255,255,255,0.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return c; })());
+    ctx.save();
+    for (var i = 0; i < ms.length; i++) {
+      var m = ms[i], bx = r.x + m.x * r.w, by = r.y + m.y * r.h, W0 = m.w * r.w;
+      for (var j = 0; j < m.parts.length; j++) {
+        var p = m.parts[j]; p.age += dt * p.sp;
+        if (p.age >= p.life) { p.age = 0; p.life = 4 + Math.random() * 3.5; p.ox = Math.random() - 0.5; p.sz = 0.7 + Math.random() * 0.8; p.sp = 0.6 + Math.random() * 0.8; }
+        var t = p.age / p.life, a = Math.sin(Math.PI * Math.pow(t, 0.7)) * 0.2 * k * (0.5 + 0.5 * m.s);   // ふわっと現れて、ゆっくり消える
+        if (a < 0.01) continue;
+        var x = bx + p.ox * W0 + Math.sin(e.sec * 0.35 + p.ph) * W0 * 0.12 * t + t * (4 + wx.wind * 3) * u, y = by - t * (0.07 + 0.05 * m.s) * r.h, sz = (W0 * 0.7 + t * W0 * 1.1) * p.sz;
+        ctx.globalAlpha = Math.min(0.5, a); ctx.drawImage(spr, x - sz / 2, y - sz / 2, sz, sz);
+      }
+    }
+    ctx.restore();
+  };
+
+  // --- 昼の空気の動き: 光の中を漂うホコリ(綿毛) と、ときどき横切る小さな虫。何も起きない平日の昼でも画面が静止画にならないように。
+  //     ホコリは風にゆっくり流れ、光を拾った一瞬だけ白く光る。虫は止まって(ホバリング)は、すっと別の場所へ飛ぶ
+  R._motes = function (ctx, e) {
+    var wx = e.wx; if (wx.rain > 0.15 || wx.snow > 0.15) return;
+    var k = smooth(2, 14, e.alt) * (1 - wx.cloud * 0.5) * (1 - wx.fog * 0.6); if (k < 0.05) return;
+    var W = this.W, H = this.H, u = Math.max(1, W / 1000), m = this.motes, i, p, sec = e.sec, dt = Math.min(e.dt, 0.1);
+    if (!m) {
+      var r = rng(77); m = this.motes = { dust: [], bugs: [], spr: canvas(24, 24) };
+      for (i = 0; i < 26; i++) m.dust.push({ x: r(), y: 0.08 + r() * 0.84, z: r(), ph: r() * 6.283, sp: 0.5 + r() });
+      for (i = 0; i < 4; i++) m.bugs.push({ x: r(), y: 0.2 + r() * 0.5, fx: 0, fy: 0, tx: 0, ty: 0, t: 0, dur: 0, hold: r() * 2, z: 0.5 + r() * 0.5, ph: r() * 6 });
+      var g = m.spr.getContext('2d'), gr = g.createRadialGradient(12, 12, 0, 12, 12, 12);
+      gr.addColorStop(0, 'rgba(255,248,228,1)'); gr.addColorStop(0.35, 'rgba(255,246,222,0.45)'); gr.addColorStop(1, 'rgba(255,244,220,0)');
+      g.fillStyle = gr; g.fillRect(0, 0, 24, 24);
+    }
+    ctx.save();
+    for (i = 0; i < m.dust.length; i++) {
+      p = m.dust[i];
+      p.x += dt * (0.004 + wx.wind * 0.0014) * (0.4 + p.z) + Math.sin(sec * 0.31 * p.sp + p.ph) * dt * 0.004;
+      p.y += Math.cos(sec * 0.23 * p.sp + p.ph * 1.3) * dt * 0.003 - dt * 0.0012;
+      if (p.y < 0.04) p.y = 0.96; p.x = (p.x + 1) % 1;
+      var tw = 0.25 + 0.75 * Math.pow(Math.max(0, Math.sin(sec * 0.9 * p.sp + p.ph * 2)), 3), a = k * 0.55 * tw * (0.3 + 0.7 * p.z), sz = (3 + 9 * p.z) * u;
+      if (a < 0.02) continue;
+      ctx.globalAlpha = Math.min(0.8, a); ctx.drawImage(m.spr, p.x * W - sz / 2, p.y * H - sz / 2, sz, sz);
+    }
+    ctx.fillStyle = 'rgb(28,30,34)';
+    for (i = 0; i < m.bugs.length; i++) {
+      p = m.bugs[i]; p.t += dt;
+      if (p.dur === 0 || p.t >= p.dur + p.hold) {                                // 次の行き先へ (たまに遠く、たいてい近く)
+        p.fx = p.x; p.fy = p.y; p.t = 0; p.dur = 0.5 + Math.random() * 1.1; p.hold = 0.4 + Math.random() * 2.2;
+        var far = Math.random() < 0.3;
+        p.tx = clamp(p.x + (Math.random() - 0.5) * (far ? 0.7 : 0.18), -0.05, 1.05); p.ty = clamp(p.y + (Math.random() - 0.5) * (far ? 0.4 : 0.12), 0.1, 0.9);
+      }
+      var f = clamp(p.t / p.dur, 0, 1), ef = f * f * (3 - 2 * f); p.x = p.fx + (p.tx - p.fx) * ef; p.y = p.fy + (p.ty - p.fy) * ef;
+      var flying = f < 1, bx = p.x * W + Math.sin(sec * 31 + p.ph) * (flying ? 1.1 : 0.5) * u, by = p.y * H + Math.cos(sec * 27 + p.ph) * (flying ? 1.1 : 0.6) * u + Math.sin(sec * 2.1 + p.ph) * 1.2 * u;
+      var ang = Math.atan2(p.ty - p.fy, p.tx - p.fx), s2 = (1.5 + 1.6 * p.z) * u;
+      ctx.globalAlpha = Math.min(0.75, k * 0.8);
+      ctx.beginPath(); ctx.ellipse(bx, by, s2 * 1.1, s2 * 0.7, ang, 0, TAU); ctx.fill();
+      ctx.globalAlpha = Math.min(0.3, k * 0.35) * (0.5 + 0.5 * Math.sin(sec * 90 + p.ph));   // 羽のぼやけ
+      ctx.beginPath(); ctx.ellipse(bx - Math.sin(ang) * s2 * 0.4, by + Math.cos(ang) * s2 * 0.4, s2 * 1.5, s2 * 0.5, ang + 1.2, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+  };
+
   // ------------------------------------------------------------------ 単体で使う: 任意の要素の上に空を重ねる
   function mount(target, opts) {
     var el = typeof target === 'string' ? document.querySelector(target) : target;
@@ -932,7 +1000,7 @@
     if (o.place) geocode(o.place).then(function (p) { rd.o.lat = p.lat; rd.o.lon = p.lon; if (o.weather === 'auto') api.setWeather('auto'); }).catch(function (e) { console.warn('[UtsuroiSky]', e.message); });
     function tick(t) {
       if (!running) return; raf = requestAnimationFrame(tick);
-      if (document.hidden || !visible || t - last < 1000 / o.fps) return;
+      if (document.hidden || !visible || t - last < 1000 / o.fps - 3) return;
       var dt = (t - last) / 1000; last = t; var date = o.date || new Date();
       ctx.clearRect(0, 0, cv.width, cv.height);
       rd.render(ctx, { date: date, t: t / 1000, dt: dt, seasons: seasonBlend(date, rd.o.lat, o.transitions) });
@@ -1291,13 +1359,14 @@
     harbor:   { name: '港町',       horizon: 0.55, top: 0.08, ground: [80, 95, 110], city: true },
     kobe:     { name: '神戸',       horizon: 0.62, top: 0.08, ground: [90, 105, 120], city: true },
     tokyo:    { name: '東京',       horizon: 0.42, top: 0.08, ground: [120, 125, 140], city: true },
-    cyber:    { name: 'サイバー',   horizon: 0.55, top: 0.08, ground: [50, 40, 90],  city: true },
+    cyber:    { name: 'サイバー', waves: false,   horizon: 0.55, top: 0.08, ground: [50, 40, 90],  city: true },
     beach:    { name: 'ビーチ',     horizon: 0.50, top: 0.08, ground: [225, 205, 160] },
     home:     { name: '家',         horizon: 0.55, top: 0.12, ground: [150, 120, 95], layered: true, glass: { box: [0.25, 0.03, 0.99, 0.64], scale: 0.5 } },   // glass: 窓ガラスの範囲 (遠い窓なので水滴は範囲内に小さく)   // 窓の外(季節×時間) + 屋内(時間 + 小物の有無)
-    office:   { name: 'オフィス',   horizon: 0.55, top: 0.12, ground: [110, 115, 125], city: true, layered: true, outsideShift: 0.1, glass: { box: [0.17, 0.09, 0.97, 0.55], scale: 0.5 } },   // 窓の外の絵を上へずらし、窓の下端に街並みを見せる
+    office:   { name: 'オフィス', waves: false,   horizon: 0.55, top: 0.12, ground: [110, 115, 125], city: true, layered: true, outsideShift: 0.1, glass: { box: [0.17, 0.09, 0.97, 0.55], scale: 0.5 } },   // 窓の外の絵を上へずらし、窓の下端に街並みを見せる
     earth:    { name: '地球',       horizon: 0.60, top: 0.10, ground: [40, 90, 140], celestial: false, noSky: true, globe: true },   // NASA の実データで球体を描く (globe.js)   // 空から見た景色: 空の合成・天気は使わない
     temple:   { name: '寺',         horizon: 0.55, top: 0.08, ground: [95, 100, 85] },
-    fantasy:  { name: 'ファンタジー', horizon: 0.55, top: 0.08, ground: [40, 90, 70] }
+    fantasy:  { name: 'ファンタジー', waves: false, mist: [{ x: 0.76, y: 0.93, w: 0.11, s: 1 }, { x: 0.835, y: 0.775, w: 0.06, s: 0.8 }, { x: 0.30, y: 0.675, w: 0.03, s: 0.45 }, { x: 0.425, y: 0.645, w: 0.025, s: 0.4 }],   // 滝つぼの水煙 (画像に対する割合)
+    horizon: 0.55, top: 0.08, ground: [40, 90, 70] }
   };
   var TIMES = ['day', 'dawn', 'dusk', 'night'];
   // 屋内の小物セット: アルファで混ぜず「ある/ない」で切り替える (扇風機 = summer, コタツ = winter, どちらも無い = mild)
@@ -1367,7 +1436,7 @@
     Object.keys(opts || {}).forEach(function (k) { if (opts[k] !== undefined) given[k] = opts[k]; });
     var o = this.o = Object.assign({
       theme: 'mountain', lat: 34.69, lon: 135.19, weather: 'auto', date: null,
-      fps: 30, ambient: true, base: DEFAULT_BASE, format: 'webp', maxDpr: 1.5, transitions: null,
+      fps: 30, ambient: true, waves: true, base: DEFAULT_BASE, format: 'webp', maxDpr: 1.5, transitions: null,
       place: null, weatherAt: null, weatherProvider: null   // place: 地名 or 'auto' / weatherAt: 天気だけ別の場所 / weatherProvider: 自前の天気 (lat, lon) => {cloud, rain, ...}
     }, given);
     this.el = el;
@@ -1438,7 +1507,7 @@
       else console.warn('[Utsuroi] globe.js が読み込まれていません');
       return this;
     }
-    this.sky.setWater(null);
+    this.sky.setWater(null); this.sky.setMist(this.T.mist || null);
     loadImage(this._url('mask'), function (im) { if (self.theme === id) { self.coarse = self.maskSrc = im; self.dirty = true; self.sceneKey = ''; } });
     loadImage(this._url('water'), function (im) { if (self.theme === id) self.sky.setWater(im); });
     return this;
@@ -1587,9 +1656,82 @@
     m.globalAlpha = 1; this.sky.setCloudMatte(any ? this.matteC : null);
   };
 
+
+  // 水面をゆらす: 水面の行を細い横帯に分け、帯ごとに左右へずらす (遠いほど細かく小さい波、手前ほど大きくゆったり)。
+  // 帯の枚数は画面の高さの約 1/3 ほど。水面マスクの中だけを描き直すので、岸や建物は動かない
+  P._waves = function (ctx, sec) {
+    var r = this.xrect, W = this.W, H = this.H, y0 = Math.max(0, Math.floor(r.y + this.T.horizon * r.h)), y1 = Math.min(H, Math.ceil(r.y + r.h)), hh = y1 - y0;
+    if (hh < 8) return;
+    var wc = this._wv || (this._wv = canvas(2, 2)); if (wc.width !== W || wc.height !== hh) { wc.width = W; wc.height = hh; }
+    var g = wc.getContext('2d'), u = Math.max(1, W / 1000), step = Math.max(2, Math.round(H / 240)), swell = 0.8 + 0.2 * Math.sin(sec * 0.17);
+    g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, hh);
+    for (var y = 0; y < hh; y += step) {
+      var d = y / hh, ph = 62 * Math.sqrt(d + 0.02), amp = u * (0.5 + 7.5 * Math.pow(d, 1.1)) * swell;
+      var off = amp * (0.62 * Math.sin(ph - sec * 1.5) + 0.38 * Math.sin(ph * 1.9 + sec * 1.1 + 1.7 * Math.sin(sec * 0.23)));
+      var dy = u * (0.4 + 2.2 * d) * Math.sin(ph * 1.3 - sec * 1.9 + 0.8), sy = clamp(y0 + y + dy, 0, H - step);   // 上下にも少し (波の山で映り込みが伸び縮みする)
+      g.drawImage(this.scene, 0, sy, W, step, off, y, W, step);
+    }
+    g.globalCompositeOperation = 'destination-in'; g.drawImage(this.sky.water, r.x, r.y - y0, r.w, r.h);   // 水面の中だけ
+    ctx.drawImage(wc, 0, y0);
+  };
+
+
+  // 水面の波 (WebGL): 水面の帯だけを、奥行きのある 2 次元の波で歪ませて描く。
+  //   絵は変わった時だけ GPU に送り、毎フレームは時刻を渡して水面の帯を 1 回描くだけ (CPU はほぼ使わない)。
+  //   波は遠近で並べた 4 本の進行波の重ね合わせ。その傾きで、うしろの景色 (映り込み) を横と縦にゆがめ、波の斜面を明るさで見せる。
+  var WV_VS = 'attribute vec2 a;varying vec2 v;void main(){v=a*.5+.5;gl_Position=vec4(a,0.,1.);}';
+  var WV_FS = 'precision mediump float;uniform sampler2D S,M;uniform float T,Wd,L;varying vec2 v;' +
+    'void main(){' +
+    ' float d=1.-v.y; float z=1./(d*.9+.07); vec2 p=vec2((v.x-.5)*Wd*z*.5,z); vec2 g=vec2(0.);' +
+    ' vec2 k0=vec2(.94,.34);vec2 k1=vec2(-.55,.83);vec2 k2=vec2(.2,.98);vec2 k3=vec2(-.9,.44);' +
+    ' g+=k0*cos(dot(k0,p)*3.1+T*.5)*.55*3.1; g+=k1*cos(dot(k1,p)*5.3+T*.68+1.7)*.4*5.3;' +
+    ' g+=k2*cos(dot(k2,p)*8.7-T*.88+.6)*.28*8.7; g+=k3*cos(dot(k3,p)*13.9+T*1.15+2.9)*.16*13.9;' +
+    ' float sc=.0016*(.04+pow(d,1.35)*1.15); vec2 uv=v+vec2(g.x*sc*1.5,-g.y*sc*.55);' +
+    ' if(texture2D(M,uv).a<.5)uv=v;' +
+    ' vec3 c=texture2D(S,uv).rgb; float sl=g.x*.45+g.y*.6;' +
+    ' c*=1.+sl*.022*(.2+d); c+=vec3(.9,.95,1.)*pow(max(sl*.12,0.),2.)*L*(.4+d*.6);' +
+    ' float al=texture2D(M,v).a; gl_FragColor=vec4(c*al,al);}';
+  P._waveGL = function (ctx, sec, env) {
+    var r = this.xrect, W = this.W, H = this.H, y0 = Math.max(0, Math.floor(r.y + this.T.horizon * r.h)), y1 = Math.min(H, Math.ceil(r.y + r.h)), hh = y1 - y0;
+    if (hh < 8) return true;
+    var q = this._wg;
+    if (q === false) return false;
+    if (!q) {
+      var cv = canvas(2, 2), gl = cv.getContext('webgl', { premultipliedAlpha: true, antialias: false, alpha: true });
+      if (!gl) { this._wg = false; return false; }
+      var sh = function (type, src) { var o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); return gl.getShaderParameter(o, gl.COMPILE_STATUS) ? o : null; };
+      var vs = sh(gl.VERTEX_SHADER, WV_VS), fs = sh(gl.FRAGMENT_SHADER, WV_FS), pr = gl.createProgram();
+      if (!vs || !fs) { this._wg = false; return false; }
+      gl.attachShader(pr, vs); gl.attachShader(pr, fs); gl.linkProgram(pr);
+      if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) { this._wg = false; return false; }
+      gl.useProgram(pr);
+      var buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      var loc = gl.getAttribLocation(pr, 'a'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+      var mk = function (unit) { var t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); return t; };
+      q = this._wg = { cv: cv, gl: gl, pr: pr, ts: mk(0), tm: mk(1), band: canvas(2, 2), mband: canvas(2, 2), key: '', water: null, W: 0, hh: 0,
+        uT: gl.getUniformLocation(pr, 'T'), uW: gl.getUniformLocation(pr, 'Wd'), uL: gl.getUniformLocation(pr, 'L') };
+      gl.uniform1i(gl.getUniformLocation(pr, 'S'), 0); gl.uniform1i(gl.getUniformLocation(pr, 'M'), 1);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    }
+    var gl2 = q.gl, size = W + 'x' + hh, key = this.sceneKey + '|' + size;
+    if (q.W !== W || q.hh !== hh) { q.cv.width = q.band.width = q.mband.width = W; q.cv.height = q.band.height = q.mband.height = hh; q.W = W; q.hh = hh; q.water = null; q.key = ''; gl2.viewport(0, 0, W, hh); }
+    if (q.water !== this.sky.water) {                // 水面マスク (絵が変わった時だけ)
+      var m = q.mband.getContext('2d'); m.clearRect(0, 0, W, hh); m.drawImage(this.sky.water, r.x, r.y - y0, r.w, r.h);
+      gl2.activeTexture(gl2.TEXTURE1); gl2.bindTexture(gl2.TEXTURE_2D, q.tm); gl2.texImage2D(gl2.TEXTURE_2D, 0, gl2.RGBA, gl2.RGBA, gl2.UNSIGNED_BYTE, q.mband); q.water = this.sky.water;
+    }
+    if (q.key !== key) {                             // 景色 (季節・時間の混ぜ具合が変わった時だけ)
+      q.band.getContext('2d').drawImage(this.scene, 0, y0, W, hh, 0, 0, W, hh);
+      gl2.activeTexture(gl2.TEXTURE0); gl2.bindTexture(gl2.TEXTURE_2D, q.ts); gl2.texImage2D(gl2.TEXTURE_2D, 0, gl2.RGBA, gl2.RGBA, gl2.UNSIGNED_BYTE, q.band); q.key = key;
+    }
+    gl2.uniform1f(q.uT, sec); gl2.uniform1f(q.uW, W / hh); gl2.uniform1f(q.uL, env && env.day != null ? env.day : 1);
+    gl2.clearColor(0, 0, 0, 0); gl2.clear(gl2.COLOR_BUFFER_BIT); gl2.drawArrays(gl2.TRIANGLE_STRIP, 0, 4);
+    ctx.drawImage(q.cv, 0, y0);
+    return true;
+  };
+
   P._frame = function (t) {
     if (document.hidden || !this.visible) return;                // 見えていない時は描かない
-    if (t - this.last < 1000 / this.o.fps) return;
+    if (t - this.last < 1000 / this.o.fps - 3) return;   // 3ms の余裕: 60Hz の画面で 30fps にしても「33.3ms に 0.1ms 足りない」で 1 つ飛ばして 50ms になる(カクつく)のを防ぐ
     var t0 = performance.now();
     var dt = Math.min(0.1, (t - this.last) / 1000); this.last = t;
     var date = this.o.date || new Date(), o = this.o;
@@ -1599,14 +1741,15 @@
     var sb = Sky.util.seasonBlend(date, o.lat, o.transitions), tb = Sky.util.timeBlend(cel.sun.alt, cel.sun.morning);
     var ps = this.T.layered ? propsetFor(date, o.lat) : '';
     var key = ps + sb.map(function (s) { return s.k + s.w.toFixed(2); }).join() + tb.map(function (s) { return s.k + s.w.toFixed(2); }).join() + this.matteCount;
-    if (!this.T.globe && (this.dirty || key !== this.sceneKey)) { if (this._compose(sb, tb, ps)) { this.sceneKey = key; this.dirty = false; } }
+    if (!this.T.globe && (this.dirty || (key !== this.sceneKey && (t - (this._ct || 0) > 6000 || !this.sceneKey)))) {   // 季節・時間の混ぜ具合の更新は 6 秒に 1 回まで (合成は重いので、1 フレームだけ長くなってカクつくのを減らす)
+      this._ct = t; if (this._compose(sb, tb, ps)) { this.sceneKey = key; this.dirty = false; } }
 
     var ctx = this.ctx;
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
     ctx.clearRect(0, 0, this.W, this.H);
     if (this.T.globe) {
       if (this.globe && this.globe.ok) { this.globe.resize(this.W, this.H); if (this.globe.render(date, t / 1000)) { ctx.drawImage(this.globe.canvas, 0, 0); this.sceneKey = 'globe'; } }
-    } else ctx.drawImage(this.scene, 0, 0);
+    } else { ctx.drawImage(this.scene, 0, 0); if (this.o.waves && this.sky.water && !this.T.noSky && this.T.waves !== false && !this._waveGL(ctx, t / 1000)) this._waves(ctx, t / 1000); }
     if (!this.T.noSky) this.sky.render(ctx, { date: date, t: t / 1000, dt: dt, seasons: sb });
     if (this.innerOn) ctx.drawImage(this.inner, 0, 0);   // 窓の外の描画(天気・太陽・月)がすべて終わってから、屋内を手前に重ねる
     if (!this.shown && this.sceneKey && (!this.T.layered || this.innerOn)) this.shown = true;   // 絵がそろったら色から切り替える
@@ -1637,7 +1780,7 @@
     util: Sky.util, astro: Sky.astro, weather: Sky.weather
   };
 
-  // <div data-utsuroi="city" data-lat data-lon data-weather="auto|clear|cloudy|drizzle|rain|shower|sunshower|snow|fog|thunder|off" data-time="ISO" data-base data-format data-fps data-ambient="off" data-view="緯度,経度" data-place="地名|auto" data-weather-at="緯度,経度">
+  // <div data-utsuroi="city" data-lat data-lon data-weather="auto|clear|cloudy|drizzle|rain|shower|sunshower|snow|fog|thunder|off" data-time="ISO" data-base data-format data-fps data-ambient="off" data-waves="off" data-view="緯度,経度" data-place="地名|auto" data-weather-at="緯度,経度">
   function auto() {
     var els = document.querySelectorAll('[data-utsuroi]');
     for (var i = 0; i < els.length; i++) {
@@ -1648,7 +1791,7 @@
         lat: d.lat ? parseFloat(d.lat) : undefined, lon: d.lon ? parseFloat(d.lon) : undefined,
         weather: d.weather === 'off' ? null : (d.weather || 'auto'),
         date: d.time || null, base: d.base || undefined, format: d.format || undefined,
-        fps: d.fps ? parseInt(d.fps, 10) : undefined, ambient: d.ambient !== 'off',
+        fps: d.fps ? parseInt(d.fps, 10) : undefined, ambient: d.ambient !== 'off', waves: d.waves !== 'off',
         view: d.view ? d.view.split(',').map(Number) : undefined   // 地球: data-view="緯度,経度"
       });
     }

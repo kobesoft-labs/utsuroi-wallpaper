@@ -18,6 +18,8 @@ import cv2
 import numpy as np
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+import json
+THEMES = json.load(open(os.path.join(ROOT, "themes.json")))["themes"]
 SRC = os.path.join(ROOT, "images-src")
 OUT = os.path.join(ROOT, "images-aligned")
 REF_NAME = "summer-day.png"
@@ -86,13 +88,21 @@ def main():
     ap.add_argument("--theme", help="カンマ区切り。省略で全テーマ")
     ap.add_argument("--pair", nargs=3, metavar=("REF", "IMG", "OUT"), help="2枚だけ合わせる")
     ap.add_argument("--max-shift", type=float, default=None)
+    ap.add_argument("--smooth", type=float, default=None)
     args = ap.parse_args()
     if args.pair:
-        align_pair(*args.pair, shift=args.max_shift)
+        align_pair(*args.pair, shift=args.max_shift, smooth=args.smooth)
         return
     themes = args.theme.split(",") if args.theme else sorted(d for d in os.listdir(SRC) if os.path.isdir(os.path.join(SRC, d)))
     for theme in themes:
         d = os.path.join(SRC, theme)
+        if THEMES.get(theme, {}).get("noAlign"):   # 写真が元で、ビルの形を守りたいテーマ: 位置合わせのワープは建物を曲げるので、そのまま使う
+            out = os.path.join(OUT, theme); os.makedirs(out, exist_ok=True)
+            for n in sorted(os.listdir(d)):
+                if n.endswith(".png"):
+                    cv2.imwrite(os.path.join(out, n), cv2.imread(os.path.join(d, n), cv2.IMREAD_UNCHANGED))
+            print(f"[{theme}] 位置合わせなし (noAlign)")
+            continue
         ref_path = os.path.join(d, REF_NAME)
         if not os.path.exists(ref_path):
             print(f"[{theme}] {REF_NAME} が無いのでスキップ")

@@ -29,6 +29,7 @@ const SIZE = args.size || '1536x1024';
 const CONCURRENCY = Number(args.concurrency || 3);
 const themeIds = (args.theme ? String(args.theme).split(',') : Object.keys(cfg.themes));
 const withMask = !args['no-mask'];
+const SAMPLES = Number(args.samples || 1);   // 写真が元のテーマの編集は、何枚か描かせて形が元の絵に一番近いものを選ぶ
 const onlyStage = args.stage ? Number(args.stage) : null;   // 指定した段階だけ作る (写真が元のテーマは、段階1のあとに写真へ位置合わせしてから次へ)
 const SEASONS = ['spring', 'summer', 'autumn', 'winter'];
 const TIMES = ['dawn', 'dusk', 'night'];
@@ -39,15 +40,16 @@ function jobs(id) {
   const t = cfg.themes[id], list = [];
   if (t.globe) return list;   // 地球は NASA の実データを WebGL で描く (tools/build-earth.mjs)
   const out = (name) => path.join(root, 'images', id, name + '.png');
+  const KEEPX = t.photo ? KEEP + ' STRICT GEOMETRY: straight edges stay perfectly straight and vertical walls stay vertical; flat roofs stay flat; do not curve, bend, lean or redesign any building. ' + (t.extraKeep || '') : KEEP;
   // 写真が元のテーマ: 実写を「絵」に描き直す (形・位置は写真のまま)。そのあと align.py --pair で写真に合わせ直す
   if (t.photo) list.push({ stage: 1, file: out('summer-day'), kind: 'edit', from: path.join(root, t.photo),
-    prompt: `Redraw this photograph as a wide cinematic painterly semi-realistic illustration. ${t.scene} Season: ${cfg.seasons.summer}; ${t.seasonNotes.summer}. Time of day: ${cfg.times.day}; make it a clear bright daytime with a vivid blue sky and a few soft white clouds (the photo was taken near sunset: remove the sunset colors). Remove all people, flags, text, signs and logos. ${KEEP} Keep every building, tower, hill and shoreline at exactly the same position, size and outline as in the photograph, with no distortion, no bending of straight lines and no added or removed buildings. The sun and the moon must NOT be visible. Keep a generous area of open sky in the upper part of the frame. No text, no letters, no logos, no watermark.` });
+    prompt: `Redraw this photograph as a wide cinematic painterly semi-realistic illustration. ${t.scene} Season: ${cfg.seasons.summer}; ${t.seasonNotes.summer}. Time of day: ${cfg.times.day}; make it a clear bright daytime with a vivid blue sky and a few soft white clouds (the photo was taken near sunset: remove the sunset colors). Remove all people, flags, text, signs and logos. ${KEEPX} Trace the outline of every building from the photograph exactly: straight edges stay perfectly straight, vertical walls stay perfectly vertical, flat roofs stay flat, and each building keeps its exact width, height and proportions (do NOT curve, bend, lean, taper or round any tower, and do NOT redesign the roof tops). Do not add or remove buildings. ${t.extraKeep || ''} The sun and the moon must NOT be visible. Keep a generous area of open sky in the upper part of the frame. No text, no letters, no logos, no watermark.` });
   else list.push({ stage: 1, file: out('summer-day'), kind: 'generate',
     prompt: `${t.scene} ${cfg.seasons.summer}; ${t.seasonNotes.summer}. Time of day: ${cfg.times.day}. ${cfg.style}` });
-  for (const s of SEASONS.filter((s) => s !== 'summer')) list.push({ stage: 2, file: out(`${s}-day`), kind: 'edit', from: out('summer-day'),
-    prompt: `Change the season from summer to ${cfg.seasons[s]}; ${t.seasonNotes[s]}. Keep the clear daytime lighting. ${KEEP} ${cfg.style}` });
-  for (const s of SEASONS) for (const tm of TIMES) list.push({ stage: 3, file: out(`${s}-${tm}`), kind: 'edit', from: out(`${s}-day`),
-    prompt: `Change the time of day to: ${cfg.times[tm]}.${tm === 'night' ? ' ' + t.nightNote + '.' : ''} ${KEEP} ${cfg.style}` });
+  for (const s of SEASONS.filter((s) => s !== 'summer')) list.push({ stage: 2, pick: !!t.photo, file: out(`${s}-day`), kind: 'edit', from: out('summer-day'),
+    prompt: `${t.photo ? t.extraKeep + ' ' : ''}Change the season from summer to ${cfg.seasons[s]}; ${t.seasonNotes[s]}. Keep the clear daytime lighting. ${KEEPX} ${cfg.style}` });
+  for (const s of SEASONS) for (const tm of TIMES) list.push({ stage: 3, pick: !!t.photo, file: out(`${s}-${tm}`), kind: 'edit', from: out(`${s}-day`),
+    prompt: `${t.photo ? t.extraKeep + ' ' : ''}Change the time of day to: ${cfg.times[tm]}.${tm === 'night' ? ' ' + t.nightNote + '.' : ''} ${KEEPX} ${cfg.style}` });
   if (withMask && !t.noSky) list.push({ stage: 3, file: out('mask'), kind: 'edit', from: out('summer-day'),
     prompt: 'Replace ONLY the sky (everything that is open sky or clouds, including sky seen through windows) with one perfectly flat solid pure magenta color #FF00FF with no gradient and no texture. Leave every other pixel completely unchanged. Do not add anything. Keep the exact same composition.' });
   // 屋内レイヤー (layered テーマ): 窓をマゼンタにした部屋。小物(扇風機/コタツ)は「ある/ない」で別画像にする
@@ -82,7 +84,8 @@ async function api(endpoint, body, tries = 4) {
     throw new Error(`${res.status} ${text.slice(0, 300)}`);
   }
 }
-async function run(job) {
+import { execFileSync } from 'node:child_process';
+async function runOne(job) {
   let b64;
   if (job.kind === 'generate') {
     b64 = await api('generations', { model: MODEL, prompt: job.prompt, size: SIZE, quality: QUALITY, n: 1 });
@@ -93,8 +96,25 @@ async function run(job) {
     fd.append('image', new Blob([await fs.readFile(await source(job.from))], { type: 'image/png' }), 'base.png');
     b64 = await api('edits', fd);
   }
+  return Buffer.from(b64, 'base64');
+}
+async function run(job) {
   await fs.mkdir(path.dirname(job.file), { recursive: true });
-  await fs.writeFile(job.file, Buffer.from(b64, 'base64'));
+  const multi = SAMPLES > 1 && job.kind === 'edit' && job.pick;
+  if (!multi) { await fs.writeFile(job.file, await runOne(job)); return; }
+  const ref = await source(job.from), tmp = [];
+  const bufs = await Promise.all(Array.from({ length: SAMPLES }, () => runOne(job).catch(() => null)));
+  let best = null;
+  for (let i = 0; i < bufs.length; i++) {
+    if (!bufs[i]) continue;
+    const f = job.file.replace(/\.png$/, `.s${i}.png`); await fs.writeFile(f, bufs[i]); tmp.push(f);
+    const sc = Number(execFileSync(path.join(root, '.venv/bin/python'), [path.join(root, 'tools/score.py'), ref, f]).toString());
+    if (!best || sc < best.sc) best = { sc, i };
+  }
+  if (!best) throw new Error('すべての試行が失敗');
+  await fs.writeFile(job.file, bufs[best.i]);
+  console.log('  採用', path.basename(job.file), `試行${best.i}`, '形のずれ', best.sc.toFixed(2));
+  await Promise.all(tmp.map((f) => fs.rm(f, { force: true })));
 }
 const exists = (f) => fs.access(f).then(() => true, () => false);
 // 変換済み(webp)や退避済み(images-src)の画像も「ある」とみなす / 編集元は PNG 原本を探す
