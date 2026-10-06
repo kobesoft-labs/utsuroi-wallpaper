@@ -7,11 +7,6 @@
 <style>
   html, body { margin: 0; height: 100%; font-family: system-ui, "Hiragino Sans", sans-serif; background: #111; }
   #bg { position: fixed; inset: 0; }
-  .card { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); width: min(340px, 86vw); padding: 28px; border-radius: 16px;
-    background: rgba(255,255,255,.82); color: #222; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
-  .card h1 { font-size: 18px; margin: 0 0 16px; }
-  .card input { width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; }
-  .card button { width: 100%; padding: 10px; border: 0; border-radius: 8px; background: #2563eb; color: #fff; font-size: 14px; }
   .panel { position: fixed; left: 12px; right: 12px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; padding: 10px 14px;
     border-radius: 12px; background: rgba(20,20,28,.8); color: #eee; font-size: 12px; }
   .panel label { display: flex; align-items: center; gap: 6px; }
@@ -24,10 +19,6 @@
 <!-- ① 背景にしたい要素に data-utsuroi="テーマID" を付けるだけ -->
 <div id="bg" data-utsuroi="mountain" data-weather="clear"></div>
 
-<div class="card">
-  <h1>ログイン</h1>
-  <input placeholder="メールアドレス"><input type="password" placeholder="パスワード"><button>ログイン</button>
-</div>
 
 <div class="panel">
   <label>テーマ <select id="theme"></select></label>
